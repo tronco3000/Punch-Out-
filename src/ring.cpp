@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -98,6 +99,18 @@ int main()
 		return -1;
 	}
 
+	Texture texturaCorazonLleno;
+	if (!texturaCorazonLleno.loadFromFile("assets/Pixel Art Boxer Character Pack/extras/life progress.png"))
+	{
+		return -1;
+	}
+
+	Texture texturaCorazonVacio;
+	if (!texturaCorazonVacio.loadFromFile("assets/Pixel Art Boxer Character Pack/extras/life under.png"))
+	{
+		return -1;
+	}
+
 	Sprite barraEnergiaClasicoProgreso(texturaEnergiaClasicoProgreso);
 	Sprite barraEnergiaClasicoDescargada(texturaEnergiaClasicoDescargada);
 	Sprite barraEnergiaHitmanProgreso(texturaEnergiaHitmanProgreso);
@@ -110,6 +123,10 @@ int main()
 	Sprite barraEscudoClasicoDescargado(texturaEscudoClasicoDescargado);
 	Sprite barraEscudoHitmanProgreso(texturaEscudoHitmanProgreso);
 	Sprite barraEscudoHitmanDescargado(texturaEscudoHitmanDescargado);
+	Sprite corazonRojoLleno(texturaCorazonLleno);
+	Sprite corazonRojoVacio(texturaCorazonVacio);
+	Sprite corazonAzulLleno(texturaCorazonLleno);
+	Sprite corazonAzulVacio(texturaCorazonVacio);
 
 	const float escalaBarraEnergiaClasico = 3.0f;
 	const float escalaBarraEnergiaHitman = 3.0f;
@@ -117,8 +134,10 @@ int main()
 	const float escalaBarraVidaHitman = 3.0f;
 	const float escalaBarraEscudoClasico = 3.0f;
 	const float escalaBarraEscudoHitman = 3.0f;
-	const float offsetIndicadores = 260.0f;
 	const float separacionIndicadores = 36.0f;
+	const float offsetIndicadoresSuperior = 260.0f;
+	const float offsetIndicadoresInferior = 25.0f;
+
 	barraEnergiaClasicoProgreso.setScale(escalaBarraEnergiaClasico, escalaBarraEnergiaClasico);
 	barraEnergiaClasicoDescargada.setScale(escalaBarraEnergiaClasico, escalaBarraEnergiaClasico);
 	barraEnergiaHitmanProgreso.setScale(escalaBarraEnergiaHitman, escalaBarraEnergiaHitman);
@@ -131,6 +150,11 @@ int main()
 	barraEscudoClasicoDescargado.setScale(escalaBarraEscudoClasico, escalaBarraEscudoClasico);
 	barraEscudoHitmanProgreso.setScale(escalaBarraEscudoHitman, escalaBarraEscudoHitman);
 	barraEscudoHitmanDescargado.setScale(escalaBarraEscudoHitman, escalaBarraEscudoHitman);
+	const float escalaCorazon = 2.6f;
+	corazonRojoLleno.setScale(escalaCorazon, escalaCorazon);
+	corazonRojoVacio.setScale(escalaCorazon, escalaCorazon);
+	corazonAzulLleno.setScale(escalaCorazon, escalaCorazon);
+	corazonAzulVacio.setScale(escalaCorazon, escalaCorazon);
 
 	Font fuenteJuego;
 	if (!fuenteJuego.loadFromFile("assets/fonts/letra/Jumps Winter.ttf"))
@@ -293,7 +317,7 @@ int main()
 		const float anchoVidaUnderClasico = static_cast<float>(texturaVidaClasicoDescargada.getSize().x) * escalaBarraVidaClasico;
 		const float anchoEscudoUnderClasico = static_cast<float>(texturaEscudoClasicoDescargado.getSize().x) * escalaBarraEscudoClasico;
 		const float totalAnchoClasico = anchoEnergiaUnderClasico + anchoVidaUnderClasico + anchoEscudoUnderClasico + (separacionIndicadores * 2.0f);
-		const float posYClasico = posicionBoxeador.y - offsetIndicadores;
+		const float posYClasico = posicionBoxeador.y + offsetIndicadoresInferior;
 		const float baseXClasico = posicionBoxeador.x - (totalAnchoClasico * 0.5f);
 
 		barraEnergiaClasicoDescargada.setPosition(baseXClasico, posYClasico);
@@ -317,7 +341,7 @@ int main()
 		const float anchoVidaUnderHitman = static_cast<float>(texturaVidaHitmanDescargada.getSize().x) * escalaBarraVidaHitman;
 		const float anchoEscudoUnderHitman = static_cast<float>(texturaEscudoHitmanDescargado.getSize().x) * escalaBarraEscudoHitman;
 		const float totalAnchoHitman = anchoEnergiaUnderHitman + anchoVidaUnderHitman + anchoEscudoUnderHitman + (separacionIndicadores * 2.0f);
-		const float posYHitman = posicionHitman.y - offsetIndicadores;
+		const float posYHitman = std::max(posicionHitman.y - offsetIndicadoresSuperior, 20.0f);
 		const float baseXHitman = posicionHitman.x - (totalAnchoHitman * 0.5f);
 
 		barraEnergiaHitmanDescargada.setPosition(baseXHitman, posYHitman);
@@ -398,6 +422,14 @@ int main()
 	bool juegoTerminado = false;
 	string ganadorTexto;
 	Color colorGanador = Color::White;
+	bool ultimoKnockdownRojo = false;
+	bool ultimoKnockdownAzul = false;
+	bool animacionKnockdownIniciadaRojo = false;
+	bool animacionKnockdownIniciadaAzul = false;
+	bool jugadorRojoEliminado = false;
+	bool jugadorAzulEliminado = false;
+	bool jugadorRojoGanador = false;
+	bool jugadorAzulGanador = false;
 
 	Text textoCuentaRegresiva;
 	textoCuentaRegresiva.setFont(fuenteJuego);
@@ -411,6 +443,7 @@ int main()
 	textoGameOver.setFont(fuenteJuego);
 	textoGameOver.setCharacterSize(96);
 	textoGameOver.setFillColor(Color::White);
+
 
 	Text instruccionesClasico;
 	instruccionesClasico.setFont(fuenteJuego);
@@ -492,13 +525,13 @@ int main()
 		}
 		actualizarIndicadores();
 
-		if (!bloqueoActivo && animacionActual != animacionReposo && animacionActual->hasFinished())
+		if (!jugadorRojoEliminado && !jugadorRojoGanador && !bloqueoActivo && animacionActual != animacionReposo && animacionActual->hasFinished())
 		{
 			reproducirAnimacionClasico("idle", true);
 			animacionActual = animacionReposo;
 		}
 
-		if (!bloqueoHitman && animacionHitmanActual != hitmanReposo && animacionHitmanActual->hasFinished())
+		if (!jugadorAzulEliminado && !jugadorAzulGanador && !bloqueoHitman && animacionHitmanActual != hitmanReposo && animacionHitmanActual->hasFinished())
 		{
 			reproducirAnimacionHitman("idle", true);
 			animacionHitmanActual = hitmanReposo;
@@ -531,19 +564,51 @@ int main()
 		// Actualizar pausa por knockdown
 		if (pausaPorKnockdown && !juegoTerminado)
 		{
-			float elapsed = relojKnockdown.getElapsedTime().asSeconds();
+			const float elapsed = relojKnockdown.getElapsedTime().asSeconds();
 			tiempoKnockdownRestante = std::max(0.0f, 3.0f - elapsed);
-			int conteo = static_cast<int>(tiempoKnockdownRestante + 0.999f);
+			int conteo = static_cast<int>(std::ceil(tiempoKnockdownRestante));
+			conteo = std::max(1, conteo);
 			if (conteo != ultimoConteo)
 			{
 				ultimoConteo = conteo;
-				textoCuentaRegresiva.setString(std::to_string(std::max(1, conteo)));
+				textoCuentaRegresiva.setString(std::to_string(conteo));
 				const FloatRect lim = textoCuentaRegresiva.getLocalBounds();
 				textoCuentaRegresiva.setOrigin(lim.left + (lim.width * 0.5f), lim.top + (lim.height * 0.5f));
 			}
+
+			if (conteo == 1)
+			{
+				if (ultimoKnockdownRojo && !animacionKnockdownIniciadaRojo)
+				{
+					animacionKnockdownIniciadaRojo = true;
+					reproducirAnimacionClasico("knockdown", false);
+				}
+				if (ultimoKnockdownAzul && !animacionKnockdownIniciadaAzul)
+				{
+					animacionKnockdownIniciadaAzul = true;
+					reproducirAnimacionHitman("knockdown", false);
+				}
+			}
+
 			if (elapsed >= 3.0f)
 			{
 				pausaPorKnockdown = false;
+				if (ultimoKnockdownRojo && vidasClasico > 0)
+				{
+					vidaClasico = vidaMaximaClasico;
+					reproducirAnimacionClasico("idle", true);
+					animacionActual = animacionReposo;
+				}
+				if (ultimoKnockdownAzul && vidasHitman > 0)
+				{
+					vidaHitman = vidaMaximaHitman;
+					reproducirAnimacionHitman("idle", true);
+					animacionHitmanActual = hitmanReposo;
+				}
+				ultimoKnockdownRojo = false;
+				ultimoKnockdownAzul = false;
+				animacionKnockdownIniciadaRojo = false;
+				animacionKnockdownIniciadaAzul = false;
 			}
 		}
 
@@ -631,17 +696,26 @@ int main()
 							vidasHitman -= 1;
 							if (vidasHitman > 0)
 							{
-								reproducirAnimacionHitman("knockdown", false);
 								relojKnockdown.restart();
 								pausaPorKnockdown = true;
-								ultimoConteo = 3;
+								tiempoKnockdownRestante = 3.0f;
+								ultimoConteo = 0;
+								textoCuentaRegresiva.setString("3");
+								const FloatRect limKD = textoCuentaRegresiva.getLocalBounds();
+								textoCuentaRegresiva.setOrigin(limKD.left + (limKD.width * 0.5f), limKD.top + (limKD.height * 0.5f));
+								ultimoKnockdownAzul = true;
+								ultimoKnockdownRojo = false;
+								animacionKnockdownIniciadaAzul = false;
 							}
 							else
 							{
 								reproducirAnimacionHitman("knockout", false);
+								reproducirAnimacionClasico("win", true);
 								juegoTerminado = true;
-								ganadorTexto = "GAME OVER! Ganador Jugador rojo";
+								ganadorTexto = "GAME OVER!\nGanador Jugador rojo";
 								colorGanador = Color::Red;
+								jugadorAzulEliminado = true;
+								jugadorRojoGanador = true;
 							}
 						}
 					const string& animacionGolpe = comboGolpes[indiceGolpe];
@@ -722,17 +796,26 @@ int main()
 							vidasClasico -= 1;
 							if (vidasClasico > 0)
 							{
-								reproducirAnimacionClasico("knockdown", false);
 								relojKnockdown.restart();
 								pausaPorKnockdown = true;
-								ultimoConteo = 3;
+								tiempoKnockdownRestante = 3.0f;
+								ultimoConteo = 0;
+								textoCuentaRegresiva.setString("3");
+								const FloatRect limKD = textoCuentaRegresiva.getLocalBounds();
+								textoCuentaRegresiva.setOrigin(limKD.left + (limKD.width * 0.5f), limKD.top + (limKD.height * 0.5f));
+								ultimoKnockdownRojo = true;
+								ultimoKnockdownAzul = false;
+								animacionKnockdownIniciadaRojo = false;
 							}
 							else
 							{
 								reproducirAnimacionClasico("knockout", false);
+								reproducirAnimacionHitman("win", true);
 								juegoTerminado = true;
-								ganadorTexto = "GAME OVER! Ganador Jugador azul";
+								ganadorTexto = "GAME OVER!\nGanador Jugador azul";
 								colorGanador = Color::Blue;
+								jugadorRojoEliminado = true;
+								jugadorAzulGanador = true;
 							}
 						}
 					const string& animacionGolpe = comboGolpesHitman[indiceGolpeHitman];
@@ -817,6 +900,36 @@ int main()
 		{
 			ventanaRing.draw(barraEscudoHitmanProgreso);
 		}
+		const float corazonAncho = static_cast<float>(texturaCorazonLleno.getSize().x) * escalaCorazon;
+		const float espacioCorazon = 18.0f;
+		const float posYCorazones = static_cast<float>(dimensionesVentana.y) - 120.0f;
+		auto dibujarCorazones = [&](int vidasRestantes, bool esRojo)
+		{
+			for (int i = 0; i < 3; ++i)
+			{
+				const bool lleno = i < vidasRestantes;
+				Sprite sprite = esRojo
+					? (lleno ? corazonRojoLleno : corazonRojoVacio)
+					: (lleno ? corazonAzulLleno : corazonAzulVacio);
+				if (esRojo)
+				{
+					sprite.setColor(lleno ? Color::Red : Color(255, 0, 0, 110));
+				}
+				else
+				{
+					const Color azulIntenso(180, 245, 255);
+					const Color azulApagado(120, 200, 255, 155);
+					sprite.setColor(lleno ? azulIntenso : azulApagado);
+				}
+				float posX = esRojo
+					? (24.0f + static_cast<float>(i) * (corazonAncho + espacioCorazon))
+					: (static_cast<float>(dimensionesVentana.x) - (corazonAncho + 24.0f) - static_cast<float>(i) * (corazonAncho + espacioCorazon));
+				sprite.setPosition(posX, posYCorazones);
+				ventanaRing.draw(sprite);
+			}
+		};
+		dibujarCorazones(vidasClasico, true);
+		dibujarCorazones(vidasHitman, false);
 		ventanaRing.draw(instruccionesClasico);
 		ventanaRing.draw(instruccionesHitman);
 		if (pausaPorKnockdown && !juegoTerminado)
@@ -827,6 +940,18 @@ int main()
 		{
 			textoGameOver.setString(ganadorTexto);
 			textoGameOver.setFillColor(colorGanador);
+			unsigned int tamGameOver = 96;
+			const float margenHorizontal = 40.0f;
+			const float anchoMaximoTexto = static_cast<float>(dimensionesVentana.x) - (margenHorizontal * 2.0f);
+			for (; tamGameOver >= 36; tamGameOver -= 4)
+			{
+				textoGameOver.setCharacterSize(tamGameOver);
+				const FloatRect medida = textoGameOver.getLocalBounds();
+				if (medida.width <= anchoMaximoTexto)
+				{
+					break;
+				}
+			}
 			const FloatRect limGO = textoGameOver.getLocalBounds();
 			textoGameOver.setOrigin(limGO.left + (limGO.width * 0.5f), limGO.top + (limGO.height * 0.5f));
 			textoGameOver.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, static_cast<float>(dimensionesVentana.y) * 0.4f);
