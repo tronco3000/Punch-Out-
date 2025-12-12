@@ -1,29 +1,24 @@
-# Directorios de origen y destino
-SRC_DIR := src
-BIN_DIR := bin
+CXX := g++
+SFML_INC ?= C:/SFML/include
+SFML_LIB ?= C:/SFML/lib
+CXXFLAGS := -std=c++17 -Iinclude -I"$(SFML_INC)"
+LDFLAGS := -L"$(SFML_LIB)"
+LDLIBS := -lsfml-graphics -lsfml-window -lsfml-system
 
-SFML := -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio -lbox2d
+APP := ring.exe
+SRC := src/ring.cpp
 
-# Obtener todos los archivos .cpp en el directorio de origen
-CPP_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+.PHONY: all build run clean
 
-# Generar los nombres de los archivos .exe en el directorio de destino
-EXE_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(BIN_DIR)/%.exe,$(CPP_FILES))
+all: build
 
-# Regla para compilar cada archivo .cpp y generar el archivo .exe correspondiente
-$(BIN_DIR)/%.exe: $(SRC_DIR)/%.cpp
-	g++ $< -o $@ $(SFML) -Iinclude
+build: $(APP)
 
-# Regla por defecto para compilar todos los archivos .cpp
-all: $(EXE_FILES)
+$(APP): $(SRC)
+	$(CXX) $(CXXFLAGS) $< $(LDFLAGS) $(LDLIBS) -o $@
 
-# Regla para ejecutar cada archivo .exe
-run%: $(BIN_DIR)/%.exe
-	./$<
+run: build
+	./$(APP)
 
-# Regla para limpiar los archivos generados
 clean:
-	rm -f $(EXE_FILES)
-
-.PHONY: all clean
-.PHONY: run-%
+	$(RM) $(APP)
