@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -26,6 +27,45 @@ int main()
 
 	Sprite lienzoRing(texturaRing);
 	lienzoRing.setScale(escalaRing, escalaRing);
+
+	Music musicaIntro;
+	if (!musicaIntro.openFromFile("assets/musica/Intro.ogg"))
+	{
+		return -1;
+	}
+	musicaIntro.setLoop(true);
+	musicaIntro.play();
+
+	Music musicaCombate;
+	if (!musicaCombate.openFromFile("assets/musica/Musica Combate.ogg"))
+	{
+		return -1;
+	}
+	musicaCombate.setLoop(true);
+
+	SoundBuffer bufferGolpe;
+	if (!bufferGolpe.loadFromFile("assets/sonidos/golpe 2.wav"))
+	{
+		return -1;
+	}
+	Sound sonidoGolpe;
+	sonidoGolpe.setBuffer(bufferGolpe);
+
+	SoundBuffer bufferKoFinal;
+	if (!bufferKoFinal.loadFromFile("assets/sonidos/KO.wav"))
+	{
+		return -1;
+	}
+	Sound sonidoKoFinal;
+	sonidoKoFinal.setBuffer(bufferKoFinal);
+
+	SoundBuffer bufferCampana;
+	if (!bufferCampana.loadFromFile("assets/sonidos/Campana.wav"))
+	{
+		return -1;
+	}
+	Sound sonidoCampana;
+	sonidoCampana.setBuffer(bufferCampana);
 
 	Texture texturaEnergiaClasicoProgreso;
 	if (!texturaEnergiaClasicoProgreso.loadFromFile("assets/Pixel Art Boxer Character Pack/extras/energy progress.png"))
@@ -428,6 +468,7 @@ int main()
 	bool faseCuentaPrevia = true;
 	float tiempoCuentaPrevia = 3.0f;
 	int ultimoConteoPrevio = 3;
+	bool campanaReproducida = false;
 
 	// Estado de pausa por knockdown y fin de juego
 	bool pausaPorKnockdown = false;
@@ -554,6 +595,7 @@ int main()
 		textoCuentaPrevia.setString("3");
 		const FloatRect limCuentaInicial = textoCuentaPrevia.getLocalBounds();
 		textoCuentaPrevia.setOrigin(limCuentaInicial.left + (limCuentaInicial.width * 0.5f), limCuentaInicial.top + (limCuentaInicial.height * 0.5f));
+		campanaReproducida = false;
 		relojEntrada.restart();
 	};
 
@@ -572,6 +614,7 @@ int main()
 			{
 				if (eventoCarga.key.code == Keyboard::Space)
 				{
+					sonidoGolpe.play();
 					pantallaCargaActiva = false;
 				}
 			}
@@ -600,6 +643,8 @@ int main()
 
 	mostrarTextoContinuar = true;
 	relojParpadeo.restart();
+	musicaIntro.stop();
+	musicaCombate.play();
 
 	if (!ventanaRing.isOpen())
 	{
@@ -629,6 +674,11 @@ int main()
 			}
 			if (tiempoCuentaPrevia <= 0.0f)
 			{
+				if (!campanaReproducida)
+				{
+					sonidoCampana.play();
+					campanaReproducida = true;
+				}
 				faseCuentaPrevia = false;
 			}
 		}
@@ -813,6 +863,7 @@ int main()
 				}
 				case Keyboard::Enter:
 				{
+					sonidoGolpe.play();
 					if (energiaHitman < costoGolpeHitman)
 					{
 						break;
@@ -851,6 +902,7 @@ int main()
 							{
 								reproducirAnimacionClasico("knockout", false);
 								reproducirAnimacionHitman("win", true);
+								sonidoKoFinal.play();
 								juegoTerminado = true;
 								ganadorTexto = "K.O";
 								colorGanador = Color::Blue;
@@ -916,6 +968,7 @@ int main()
 				}
 				case Keyboard::Q:
 				{
+					sonidoGolpe.play();
 					if (energiaClasico < costoGolpeClasico)
 					{
 						break;
@@ -954,6 +1007,7 @@ int main()
 							{
 								reproducirAnimacionHitman("knockout", false);
 								reproducirAnimacionClasico("win", true);
+								sonidoKoFinal.play();
 								juegoTerminado = true;
 								ganadorTexto = "K.O";
 								colorGanador = Color::Red;
@@ -976,6 +1030,7 @@ int main()
 			{
 				if (eventoVentana.key.code == Keyboard::Space)
 				{
+					sonidoGolpe.play();
 					if (jugadorAzulGanador)
 					{
 						reproducirAnimacionHitman("win", true);
