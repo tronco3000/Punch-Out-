@@ -173,7 +173,7 @@ int main()
 
 	Text textoContinuar;
 	textoContinuar.setFont(fuenteJuego);
-	textoContinuar.setString("Presiona cualquier tecla para continuar");
+	textoContinuar.setString("Presiona SPACE para iniciar");
 	textoContinuar.setCharacterSize(36);
 	textoContinuar.setFillColor(Color::White);
 	const FloatRect limitesContinuar = textoContinuar.getLocalBounds();
@@ -201,10 +201,12 @@ int main()
 	}
 	const float escalaBoxeador = 4.0f;
 	const float escalaHitman = 4.0f;
-	Vector2f posicionBoxeador(static_cast<float>(dimensionesVentana.x) * 0.5f,
+	const Vector2f posicionBoxeadorInicial(static_cast<float>(dimensionesVentana.x) * 0.5f,
 		static_cast<float>(dimensionesVentana.y) * 0.78f);
-	Vector2f posicionHitman(static_cast<float>(dimensionesVentana.x) * 0.7f,
+	const Vector2f posicionHitmanInicial(static_cast<float>(dimensionesVentana.x) * 0.7f,
 		static_cast<float>(dimensionesVentana.y) * 0.78f);
+	Vector2f posicionBoxeador = posicionBoxeadorInicial;
+	Vector2f posicionHitman = posicionHitmanInicial;
 	vector<string> comboGolpes = { "body-hook", "cross", "hook", "overhand", "uppercut" };
 	std::size_t indiceGolpe = 0;
 	AnimationClip animacionJabReposo;
@@ -395,6 +397,15 @@ int main()
 
 	actualizarIndicadores();
 
+	auto enRangoGolpe = [&]()
+	{
+		const float distanciaHorizontal = std::abs(posicionBoxeador.x - posicionHitman.x);
+		const float distanciaVertical = std::abs(posicionBoxeador.y - posicionHitman.y);
+		const float rangoHorizontal = 170.0f;
+		const float rangoVertical = 120.0f;
+		return distanciaHorizontal <= rangoHorizontal && distanciaVertical <= rangoVertical;
+	};
+
 	const float umbralDobleToque = 0.25f;
 	const float desplazamientoPaso = 28.0f;
 	const float desplazamientoDash = 70.0f;
@@ -414,13 +425,16 @@ int main()
 	bool mostrarTextoContinuar = true;
 	const float intervaloParpadeo = 0.65f;
 	bool pantallaCargaActiva = true;
+	bool faseCuentaPrevia = true;
+	float tiempoCuentaPrevia = 3.0f;
+	int ultimoConteoPrevio = 3;
 
 	// Estado de pausa por knockdown y fin de juego
 	bool pausaPorKnockdown = false;
 	float tiempoKnockdownRestante = 0.0f;
 	int ultimoConteo = 0;
 	bool juegoTerminado = false;
-	string ganadorTexto;
+	string ganadorTexto = "K.O";
 	Color colorGanador = Color::White;
 	bool ultimoKnockdownRojo = false;
 	bool ultimoKnockdownAzul = false;
@@ -444,10 +458,28 @@ int main()
 	textoGameOver.setCharacterSize(96);
 	textoGameOver.setFillColor(Color::White);
 
+	Text textoReinicio;
+	textoReinicio.setFont(fuenteJuego);
+	textoReinicio.setCharacterSize(36);
+	textoReinicio.setFillColor(Color::White);
+	textoReinicio.setString("Presiona SPACE para reiniciar");
+
+	Text textoPreviaPelea;
+	textoPreviaPelea.setFont(fuenteJuego);
+	textoPreviaPelea.setCharacterSize(52);
+	textoPreviaPelea.setFillColor(Color::White);
+	textoPreviaPelea.setString("La pelea comienza en...");
+
+	Text textoCuentaPrevia;
+	textoCuentaPrevia.setFont(fuenteJuego);
+	textoCuentaPrevia.setCharacterSize(120);
+	textoCuentaPrevia.setFillColor(Color::Yellow);
+	textoCuentaPrevia.setString("3");
+
 
 	Text instruccionesClasico;
 	instruccionesClasico.setFont(fuenteJuego);
-	instruccionesClasico.setString("Boxeador rojo (Flechas, Enter)");
+	instruccionesClasico.setString("Boxeador rojo (WASD, Q)");
 	instruccionesClasico.setCharacterSize(28);
 	instruccionesClasico.setFillColor(Color::Red);
 	const FloatRect limitesInstruccionesClasico = instruccionesClasico.getLocalBounds();
@@ -456,12 +488,76 @@ int main()
 
 	Text instruccionesHitman;
 	instruccionesHitman.setFont(fuenteJuego);
-	instruccionesHitman.setString("Boxeador azul (WASD, Q)");
+	instruccionesHitman.setString("Boxeador azul (Flechas, Enter)");
 	instruccionesHitman.setCharacterSize(28);
 	instruccionesHitman.setFillColor(Color::Blue);
 	const FloatRect limitesInstruccionesHitman = instruccionesHitman.getLocalBounds();
 	instruccionesHitman.setOrigin(limitesInstruccionesHitman.width, limitesInstruccionesHitman.top + (limitesInstruccionesHitman.height * 0.5f));
 	instruccionesHitman.setPosition(static_cast<float>(dimensionesVentana.x) - 24.0f, static_cast<float>(dimensionesVentana.y) - 40.0f);
+
+	auto reiniciarPartida = [&]()
+	{
+		posicionBoxeador = posicionBoxeadorInicial;
+		posicionHitman = posicionHitmanInicial;
+		energiaClasico = energiaMaximaClasico;
+		energiaHitman = energiaMaximaHitman;
+		vidaClasico = vidaMaximaClasico;
+		vidaHitman = vidaMaximaHitman;
+		escudoClasico = escudoMaximo;
+		escudoHitman = escudoMaximo;
+		escudoClasicoActivo = false;
+		escudoHitmanActivo = false;
+		vidasClasico = 3;
+		vidasHitman = 3;
+		bloqueoActivo = false;
+		bloqueoHitman = false;
+		instanteUltimoAbajo = -100.0f;
+		instanteUltimaIzquierda = -100.0f;
+		instanteUltimaDerecha = -100.0f;
+		instanteUltimoHitmanAbajo = -100.0f;
+		instanteUltimaHitmanIzquierda = -100.0f;
+		instanteUltimaHitmanDerecha = -100.0f;
+		jabReposoVisible = false;
+		temporizadorJabReposo = 0.0f;
+		indiceGolpe = 0;
+		indiceGolpeHitman = 0;
+		pausaPorKnockdown = false;
+		tiempoKnockdownRestante = 0.0f;
+		ultimoConteo = 0;
+		ultimoKnockdownRojo = false;
+		ultimoKnockdownAzul = false;
+		animacionKnockdownIniciadaRojo = false;
+		animacionKnockdownIniciadaAzul = false;
+		jugadorRojoEliminado = false;
+		jugadorAzulEliminado = false;
+		jugadorRojoGanador = false;
+		jugadorAzulGanador = false;
+		juegoTerminado = false;
+		ganadorTexto = "K.O";
+		colorGanador = Color::White;
+		animacionActual = animacionReposo;
+		animacionHitmanActual = hitmanReposo;
+		animacionActual->start(true);
+		animacionHitmanActual->start(true);
+		animacionJabReposo.start(true);
+		configurarTransformacionesClasico(animacionReposo);
+		configurarTransformacionesHitman(hitmanReposo);
+		configurarTransformacionesClasico(&animacionJabReposo);
+		textoCuentaRegresiva.setString("3");
+		const FloatRect limKD = textoCuentaRegresiva.getLocalBounds();
+		textoCuentaRegresiva.setOrigin(limKD.left + (limKD.width * 0.5f), limKD.top + (limKD.height * 0.5f));
+		relojKnockdown.restart();
+		actualizarIndicadores();
+		faseCuentaPrevia = true;
+		tiempoCuentaPrevia = 3.0f;
+		ultimoConteoPrevio = 3;
+		textoCuentaPrevia.setString("3");
+		const FloatRect limCuentaInicial = textoCuentaPrevia.getLocalBounds();
+		textoCuentaPrevia.setOrigin(limCuentaInicial.left + (limCuentaInicial.width * 0.5f), limCuentaInicial.top + (limCuentaInicial.height * 0.5f));
+		relojEntrada.restart();
+	};
+
+	reiniciarPartida();
 
 	while (ventanaRing.isOpen() && pantallaCargaActiva)
 	{
@@ -474,7 +570,10 @@ int main()
 			}
 			else if (eventoCarga.type == Event::KeyPressed)
 			{
-				pantallaCargaActiva = false;
+				if (eventoCarga.key.code == Keyboard::Space)
+				{
+					pantallaCargaActiva = false;
+				}
 			}
 		}
 
@@ -499,6 +598,9 @@ int main()
 		ventanaRing.display();
 	}
 
+	mostrarTextoContinuar = true;
+	relojParpadeo.restart();
+
 	if (!ventanaRing.isOpen())
 	{
 		return 0;
@@ -506,6 +608,7 @@ int main()
 
 	relojEntrada.restart();
 	relojDelta.restart();
+	relojParpadeo.restart();
 
 	while (ventanaRing.isOpen())
 	{
@@ -513,17 +616,48 @@ int main()
 		animacionActual->update(segundosDelta);
 		animacionJabReposo.update(segundosDelta);
 		animacionHitmanActual->update(segundosDelta);
-		energiaClasico = std::min(energiaMaximaClasico, energiaClasico + regeneracionEnergiaClasico * segundosDelta);
-		energiaHitman = std::min(energiaMaximaHitman, energiaHitman + regeneracionEnergiaHitman * segundosDelta);
-		if (!escudoClasicoActivo)
+		if (faseCuentaPrevia)
 		{
-			escudoClasico = std::min(escudoMaximo, escudoClasico + regenEscudoPorSegundo * segundosDelta);
+			tiempoCuentaPrevia = std::max(0.0f, tiempoCuentaPrevia - segundosDelta);
+			const int conteo = static_cast<int>(std::ceil(tiempoCuentaPrevia));
+			if (conteo != ultimoConteoPrevio)
+			{
+				ultimoConteoPrevio = conteo;
+				textoCuentaPrevia.setString(std::to_string(std::max(1, conteo)));
+				const FloatRect limPrevio = textoCuentaPrevia.getLocalBounds();
+				textoCuentaPrevia.setOrigin(limPrevio.left + (limPrevio.width * 0.5f), limPrevio.top + (limPrevio.height * 0.5f));
+			}
+			if (tiempoCuentaPrevia <= 0.0f)
+			{
+				faseCuentaPrevia = false;
+			}
 		}
-		if (!escudoHitmanActivo)
+		if (!faseCuentaPrevia)
 		{
-			escudoHitman = std::min(escudoMaximo, escudoHitman + regenEscudoPorSegundo * segundosDelta);
+			energiaClasico = std::min(energiaMaximaClasico, energiaClasico + regeneracionEnergiaClasico * segundosDelta);
+			energiaHitman = std::min(energiaMaximaHitman, energiaHitman + regeneracionEnergiaHitman * segundosDelta);
+			if (!escudoClasicoActivo)
+			{
+				escudoClasico = std::min(escudoMaximo, escudoClasico + regenEscudoPorSegundo * segundosDelta);
+			}
+			if (!escudoHitmanActivo)
+			{
+				escudoHitman = std::min(escudoMaximo, escudoHitman + regenEscudoPorSegundo * segundosDelta);
+			}
 		}
 		actualizarIndicadores();
+		if (juegoTerminado)
+		{
+			if (relojParpadeo.getElapsedTime().asSeconds() >= intervaloParpadeo)
+			{
+				mostrarTextoContinuar = !mostrarTextoContinuar;
+				relojParpadeo.restart();
+			}
+		}
+		else
+		{
+			mostrarTextoContinuar = true;
+		}
 
 		if (!jugadorRojoEliminado && !jugadorRojoGanador && !bloqueoActivo && animacionActual != animacionReposo && animacionActual->hasFinished())
 		{
@@ -621,110 +755,14 @@ int main()
 			}
 			else if (eventoVentana.type == Event::KeyPressed && !pausaPorKnockdown && !juegoTerminado)
 			{
+				if (faseCuentaPrevia)
+				{
+					continue;
+				}
 				const float instante = relojEntrada.getElapsedTime().asSeconds();
 				switch (eventoVentana.key.code)
 				{
 				case Keyboard::Left:
-				{
-					const bool dobleToque = (instante - instanteUltimaIzquierda) <= umbralDobleToque;
-					instanteUltimaIzquierda = instante;
-					if (dobleToque)
-					{
-						reproducirAnimacionClasico("back-dash", false);
-						posicionBoxeador.x -= desplazamientoDash;
-					}
-					else
-					{
-						reproducirAnimacionClasico("back-walk", false);
-						posicionBoxeador.x -= desplazamientoPaso;
-					}
-					aplicarPosicionClasico();
-					break;
-				}
-				case Keyboard::Right:
-				{
-					const bool dobleToque = (instante - instanteUltimaDerecha) <= umbralDobleToque;
-					instanteUltimaDerecha = instante;
-					if (dobleToque)
-					{
-						reproducirAnimacionClasico("forward-dash", false);
-						posicionBoxeador.x += desplazamientoDash;
-					}
-					else
-					{
-						reproducirAnimacionClasico("forward-walk", false);
-						posicionBoxeador.x += desplazamientoPaso;
-					}
-					aplicarPosicionClasico();
-					break;
-				}
-				case Keyboard::Down:
-				{
-					instanteUltimoAbajo = instante;
-					bloqueoActivo = true;
-					escudoClasicoActivo = true;
-					reproducirAnimacionClasico("block", true);
-					aplicarPosicionClasico();
-					break;
-				}
-				case Keyboard::Up:
-				{
-					posicionBoxeador.y -= desplazamientoVertical;
-					aplicarPosicionClasico();
-					break;
-				}
-				case Keyboard::Enter:
-				{
-					if (energiaClasico < costoGolpeClasico)
-					{
-						break;
-					}
-					energiaClasico = std::max(0.0f, energiaClasico - costoGolpeClasico);
-					if (bloqueoHitman && escudoHitman > 0.0f)
-					{
-						escudoHitman = std::max(0.0f, escudoHitman - 1.0f);
-					}
-					else
-					{
-						vidaHitman = std::max(0.0f, vidaHitman - danoGolpeRecibidoHitman);
-						const int variante = rand() % 3;
-						const char* danoAnim = (variante == 0 ? "damage-1" : (variante == 1 ? "damage-2" : "damage-3"));
-						reproducirAnimacionHitman(danoAnim, false);
-					}
-						if (vidaHitman <= 0.0f)
-						{
-							vidasHitman -= 1;
-							if (vidasHitman > 0)
-							{
-								relojKnockdown.restart();
-								pausaPorKnockdown = true;
-								tiempoKnockdownRestante = 3.0f;
-								ultimoConteo = 0;
-								textoCuentaRegresiva.setString("3");
-								const FloatRect limKD = textoCuentaRegresiva.getLocalBounds();
-								textoCuentaRegresiva.setOrigin(limKD.left + (limKD.width * 0.5f), limKD.top + (limKD.height * 0.5f));
-								ultimoKnockdownAzul = true;
-								ultimoKnockdownRojo = false;
-								animacionKnockdownIniciadaAzul = false;
-							}
-							else
-							{
-								reproducirAnimacionHitman("knockout", false);
-								reproducirAnimacionClasico("win", true);
-								juegoTerminado = true;
-								ganadorTexto = "GAME OVER!\nGanador Jugador rojo";
-								colorGanador = Color::Red;
-								jugadorAzulEliminado = true;
-								jugadorRojoGanador = true;
-							}
-						}
-					const string& animacionGolpe = comboGolpes[indiceGolpe];
-					reproducirAnimacionClasico(animacionGolpe.c_str(), false);
-					indiceGolpe = (indiceGolpe + 1) % comboGolpes.size();
-					aplicarPosicionClasico();
-					break;
-				}
-				case Keyboard::A:
 				{
 					const bool dobleToque = (instante - instanteUltimaHitmanIzquierda) <= umbralDobleToque;
 					instanteUltimaHitmanIzquierda = instante;
@@ -741,7 +779,7 @@ int main()
 					aplicarPosicionHitman();
 					break;
 				}
-				case Keyboard::D:
+				case Keyboard::Right:
 				{
 					const bool dobleToque = (instante - instanteUltimaHitmanDerecha) <= umbralDobleToque;
 					instanteUltimaHitmanDerecha = instante;
@@ -758,7 +796,7 @@ int main()
 					aplicarPosicionHitman();
 					break;
 				}
-				case Keyboard::S:
+				case Keyboard::Down:
 				{
 					instanteUltimoHitmanAbajo = instante;
 					bloqueoHitman = true;
@@ -767,30 +805,32 @@ int main()
 					aplicarPosicionHitman();
 					break;
 				}
-				case Keyboard::W:
+				case Keyboard::Up:
 				{
 					posicionHitman.y -= desplazamientoVertical;
 					aplicarPosicionHitman();
 					break;
 				}
-				case Keyboard::Q:
+				case Keyboard::Enter:
 				{
 					if (energiaHitman < costoGolpeHitman)
 					{
 						break;
 					}
 					energiaHitman = std::max(0.0f, energiaHitman - costoGolpeHitman);
-					if (bloqueoActivo && escudoClasico > 0.0f)
+					if (enRangoGolpe())
 					{
-						escudoClasico = std::max(0.0f, escudoClasico - 1.0f);
-					}
-					else
-					{
-						vidaClasico = std::max(0.0f, vidaClasico - danoGolpeRecibidoClasico);
-						const int variante = rand() % 3;
-						const char* danoAnim = (variante == 0 ? "damage-1" : (variante == 1 ? "damage-2" : "damage-3"));
-						reproducirAnimacionClasico(danoAnim, false);
-					}
+						if (bloqueoActivo && escudoClasico > 0.0f)
+						{
+							escudoClasico = std::max(0.0f, escudoClasico - 1.0f);
+						}
+						else
+						{
+							vidaClasico = std::max(0.0f, vidaClasico - danoGolpeRecibidoClasico);
+							const int variante = rand() % 3;
+							const char* danoAnim = (variante == 0 ? "damage-1" : (variante == 1 ? "damage-2" : "damage-3"));
+							reproducirAnimacionClasico(danoAnim, false);
+						}
 						if (vidaClasico <= 0.0f)
 						{
 							vidasClasico -= 1;
@@ -812,38 +852,147 @@ int main()
 								reproducirAnimacionClasico("knockout", false);
 								reproducirAnimacionHitman("win", true);
 								juegoTerminado = true;
-								ganadorTexto = "GAME OVER!\nGanador Jugador azul";
+								ganadorTexto = "K.O";
 								colorGanador = Color::Blue;
 								jugadorRojoEliminado = true;
 								jugadorAzulGanador = true;
 							}
 						}
+					}
 					const string& animacionGolpe = comboGolpesHitman[indiceGolpeHitman];
 					reproducirAnimacionHitman(animacionGolpe.c_str(), false);
 					indiceGolpeHitman = (indiceGolpeHitman + 1) % comboGolpesHitman.size();
 					aplicarPosicionHitman();
 					break;
 				}
+				case Keyboard::A:
+				{
+					const bool dobleToque = (instante - instanteUltimaIzquierda) <= umbralDobleToque;
+					instanteUltimaIzquierda = instante;
+					if (dobleToque)
+					{
+						reproducirAnimacionClasico("back-dash", false);
+						posicionBoxeador.x -= desplazamientoDash;
+					}
+					else
+					{
+						reproducirAnimacionClasico("back-walk", false);
+						posicionBoxeador.x -= desplazamientoPaso;
+					}
+					aplicarPosicionClasico();
+					break;
+				}
+				case Keyboard::D:
+				{
+					const bool dobleToque = (instante - instanteUltimaDerecha) <= umbralDobleToque;
+					instanteUltimaDerecha = instante;
+					if (dobleToque)
+					{
+						reproducirAnimacionClasico("forward-dash", false);
+						posicionBoxeador.x += desplazamientoDash;
+					}
+					else
+					{
+						reproducirAnimacionClasico("forward-walk", false);
+						posicionBoxeador.x += desplazamientoPaso;
+					}
+					aplicarPosicionClasico();
+					break;
+				}
+				case Keyboard::S:
+				{
+					instanteUltimoAbajo = instante;
+					bloqueoActivo = true;
+					escudoClasicoActivo = true;
+					reproducirAnimacionClasico("block", true);
+					aplicarPosicionClasico();
+					break;
+				}
+				case Keyboard::W:
+				{
+					posicionBoxeador.y -= desplazamientoVertical;
+					aplicarPosicionClasico();
+					break;
+				}
+				case Keyboard::Q:
+				{
+					if (energiaClasico < costoGolpeClasico)
+					{
+						break;
+					}
+					energiaClasico = std::max(0.0f, energiaClasico - costoGolpeClasico);
+					if (enRangoGolpe())
+					{
+						if (bloqueoHitman && escudoHitman > 0.0f)
+						{
+							escudoHitman = std::max(0.0f, escudoHitman - 1.0f);
+						}
+						else
+						{
+							vidaHitman = std::max(0.0f, vidaHitman - danoGolpeRecibidoHitman);
+							const int variante = rand() % 3;
+							const char* danoAnim = (variante == 0 ? "damage-1" : (variante == 1 ? "damage-2" : "damage-3"));
+							reproducirAnimacionHitman(danoAnim, false);
+						}
+						if (vidaHitman <= 0.0f)
+						{
+							vidasHitman -= 1;
+							if (vidasHitman > 0)
+							{
+								relojKnockdown.restart();
+								pausaPorKnockdown = true;
+								tiempoKnockdownRestante = 3.0f;
+								ultimoConteo = 0;
+								textoCuentaRegresiva.setString("3");
+								const FloatRect limKD = textoCuentaRegresiva.getLocalBounds();
+								textoCuentaRegresiva.setOrigin(limKD.left + (limKD.width * 0.5f), limKD.top + (limKD.height * 0.5f));
+								ultimoKnockdownAzul = true;
+								ultimoKnockdownRojo = false;
+								animacionKnockdownIniciadaAzul = false;
+							}
+							else
+							{
+								reproducirAnimacionHitman("knockout", false);
+								reproducirAnimacionClasico("win", true);
+								juegoTerminado = true;
+								ganadorTexto = "K.O";
+								colorGanador = Color::Red;
+								jugadorAzulEliminado = true;
+								jugadorRojoGanador = true;
+							}
+						}
+					}
+					const string& animacionGolpe = comboGolpes[indiceGolpe];
+					reproducirAnimacionClasico(animacionGolpe.c_str(), false);
+					indiceGolpe = (indiceGolpe + 1) % comboGolpes.size();
+					aplicarPosicionClasico();
+					break;
+				}
 				default:
 					break;
+				}
+			}
+			else if (eventoVentana.type == Event::KeyPressed && juegoTerminado)
+			{
+				if (eventoVentana.key.code == Keyboard::Space)
+				{
+					if (jugadorAzulGanador)
+					{
+						reproducirAnimacionHitman("win", true);
+					}
+					if (jugadorRojoGanador)
+					{
+						reproducirAnimacionClasico("win", true);
+					}
+					reiniciarPartida();
+					relojEntrada.restart();
+					relojDelta.restart();
+					relojParpadeo.restart();
 				}
 			}
 			else if (eventoVentana.type == Event::KeyReleased)
 			{
 				if (eventoVentana.key.code == Keyboard::Down)
-				{
-					bloqueoActivo = false;
-					escudoClasicoActivo = false;
-					const float duracion = relojEntrada.getElapsedTime().asSeconds() - instanteUltimoAbajo;
-					if (duracion <= umbralDobleToque)
-					{
-						posicionBoxeador.y += desplazamientoVertical;
-					}
-					reproducirAnimacionClasico("idle", true);
-					animacionActual = animacionReposo;
-					aplicarPosicionClasico();
-				}
-				else if (eventoVentana.key.code == Keyboard::S)
 				{
 					bloqueoHitman = false;
 					escudoHitmanActivo = false;
@@ -852,9 +1001,28 @@ int main()
 					{
 						posicionHitman.y += desplazamientoVertical;
 					}
-					reproducirAnimacionHitman("idle", true);
-					animacionHitmanActual = hitmanReposo;
+					if (!jugadorAzulGanador && !jugadorAzulEliminado)
+					{
+						reproducirAnimacionHitman("idle", true);
+						animacionHitmanActual = hitmanReposo;
+					}
 					aplicarPosicionHitman();
+				}
+				else if (eventoVentana.key.code == Keyboard::S)
+				{
+					bloqueoActivo = false;
+					escudoClasicoActivo = false;
+					const float duracion = relojEntrada.getElapsedTime().asSeconds() - instanteUltimoAbajo;
+					if (duracion <= umbralDobleToque)
+					{
+						posicionBoxeador.y += desplazamientoVertical;
+					}
+					if (!jugadorRojoGanador && !jugadorRojoEliminado)
+					{
+						reproducirAnimacionClasico("idle", true);
+						animacionActual = animacionReposo;
+					}
+					aplicarPosicionClasico();
 				}
 			}
 		}
@@ -936,14 +1104,25 @@ int main()
 		{
 			ventanaRing.draw(textoCuentaRegresiva);
 		}
+		if (faseCuentaPrevia)
+		{
+			const FloatRect limPrevio = textoPreviaPelea.getLocalBounds();
+			textoPreviaPelea.setOrigin(limPrevio.left + (limPrevio.width * 0.5f), limPrevio.top + (limPrevio.height * 0.5f));
+			textoPreviaPelea.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, static_cast<float>(dimensionesVentana.y) * 0.28f);
+			ventanaRing.draw(textoPreviaPelea);
+			const FloatRect limCuenta = textoCuentaPrevia.getLocalBounds();
+			textoCuentaPrevia.setOrigin(limCuenta.left + (limCuenta.width * 0.5f), limCuenta.top + (limCuenta.height * 0.5f));
+			textoCuentaPrevia.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, static_cast<float>(dimensionesVentana.y) * 0.42f);
+			ventanaRing.draw(textoCuentaPrevia);
+		}
 		if (juegoTerminado)
 		{
 			textoGameOver.setString(ganadorTexto);
 			textoGameOver.setFillColor(colorGanador);
-			unsigned int tamGameOver = 96;
+			unsigned int tamGameOver = 140;
 			const float margenHorizontal = 40.0f;
 			const float anchoMaximoTexto = static_cast<float>(dimensionesVentana.x) - (margenHorizontal * 2.0f);
-			for (; tamGameOver >= 36; tamGameOver -= 4)
+			for (; tamGameOver >= 60; tamGameOver -= 4)
 			{
 				textoGameOver.setCharacterSize(tamGameOver);
 				const FloatRect medida = textoGameOver.getLocalBounds();
@@ -954,8 +1133,17 @@ int main()
 			}
 			const FloatRect limGO = textoGameOver.getLocalBounds();
 			textoGameOver.setOrigin(limGO.left + (limGO.width * 0.5f), limGO.top + (limGO.height * 0.5f));
-			textoGameOver.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, static_cast<float>(dimensionesVentana.y) * 0.4f);
+			const float centroX = static_cast<float>(dimensionesVentana.x) * 0.5f;
+			const float centroY = static_cast<float>(dimensionesVentana.y) * 0.5f;
+			textoGameOver.setPosition(centroX, centroY);
 			ventanaRing.draw(textoGameOver);
+			if (mostrarTextoContinuar)
+			{
+				const FloatRect limReinicio = textoReinicio.getLocalBounds();
+				textoReinicio.setOrigin(limReinicio.left + (limReinicio.width * 0.5f), limReinicio.top + (limReinicio.height * 0.5f));
+				textoReinicio.setPosition(centroX, centroY + 90.0f);
+				ventanaRing.draw(textoReinicio);
+			}
 		}
 		ventanaRing.display();
 	}
