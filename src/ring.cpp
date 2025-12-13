@@ -485,6 +485,8 @@ int main()
 	bool jugadorAzulEliminado = false;
 	bool jugadorRojoGanador = false;
 	bool jugadorAzulGanador = false;
+	bool restaurarBloqueClasico = false;
+	bool restaurarBloqueHitman = false;
 
 	Text textoCuentaRegresiva;
 	textoCuentaRegresiva.setFont(fuenteJuego);
@@ -573,6 +575,8 @@ int main()
 		jugadorAzulEliminado = false;
 		jugadorRojoGanador = false;
 		jugadorAzulGanador = false;
+		restaurarBloqueClasico = false;
+		restaurarBloqueHitman = false;
 		juegoTerminado = false;
 		ganadorTexto = "K.O";
 		colorGanador = Color::White;
@@ -709,13 +713,23 @@ int main()
 			mostrarTextoContinuar = true;
 		}
 
-		if (!jugadorRojoEliminado && !jugadorRojoGanador && !bloqueoActivo && animacionActual != animacionReposo && animacionActual->hasFinished())
+		if (restaurarBloqueClasico && bloqueoActivo && animacionActual->hasFinished())
+		{
+			reproducirAnimacionClasico("block", true);
+			restaurarBloqueClasico = false;
+		}
+		else if (!jugadorRojoEliminado && !jugadorRojoGanador && !bloqueoActivo && animacionActual != animacionReposo && animacionActual->hasFinished())
 		{
 			reproducirAnimacionClasico("idle", true);
 			animacionActual = animacionReposo;
 		}
 
-		if (!jugadorAzulEliminado && !jugadorAzulGanador && !bloqueoHitman && animacionHitmanActual != hitmanReposo && animacionHitmanActual->hasFinished())
+		if (restaurarBloqueHitman && bloqueoHitman && animacionHitmanActual->hasFinished())
+		{
+			reproducirAnimacionHitman("block", true);
+			restaurarBloqueHitman = false;
+		}
+		else if (!jugadorAzulEliminado && !jugadorAzulGanador && !bloqueoHitman && animacionHitmanActual != hitmanReposo && animacionHitmanActual->hasFinished())
 		{
 			reproducirAnimacionHitman("idle", true);
 			animacionHitmanActual = hitmanReposo;
@@ -863,17 +877,19 @@ int main()
 				}
 				case Keyboard::Enter:
 				{
-					sonidoGolpe.play();
 					if (energiaHitman < costoGolpeHitman)
 					{
 						break;
 					}
 					energiaHitman = std::max(0.0f, energiaHitman - costoGolpeHitman);
+					sonidoGolpe.play();
 					if (enRangoGolpe())
 					{
 						if (bloqueoActivo && escudoClasico > 0.0f)
 						{
 							escudoClasico = std::max(0.0f, escudoClasico - 1.0f);
+							reproducirAnimacionClasico("block-hit", false);
+							restaurarBloqueClasico = true;
 						}
 						else
 						{
@@ -968,17 +984,19 @@ int main()
 				}
 				case Keyboard::Q:
 				{
-					sonidoGolpe.play();
 					if (energiaClasico < costoGolpeClasico)
 					{
 						break;
 					}
 					energiaClasico = std::max(0.0f, energiaClasico - costoGolpeClasico);
+					sonidoGolpe.play();
 					if (enRangoGolpe())
 					{
 						if (bloqueoHitman && escudoHitman > 0.0f)
 						{
 							escudoHitman = std::max(0.0f, escudoHitman - 1.0f);
+							reproducirAnimacionHitman("block-hit", false);
+							restaurarBloqueHitman = true;
 						}
 						else
 						{
@@ -1050,6 +1068,7 @@ int main()
 				if (eventoVentana.key.code == Keyboard::Down)
 				{
 					bloqueoHitman = false;
+					restaurarBloqueHitman = false;
 					escudoHitmanActivo = false;
 					const float duracion = relojEntrada.getElapsedTime().asSeconds() - instanteUltimoHitmanAbajo;
 					if (duracion <= umbralDobleToque)
@@ -1066,6 +1085,7 @@ int main()
 				else if (eventoVentana.key.code == Keyboard::S)
 				{
 					bloqueoActivo = false;
+					restaurarBloqueClasico = false;
 					escudoClasicoActivo = false;
 					const float duracion = relojEntrada.getElapsedTime().asSeconds() - instanteUltimoAbajo;
 					if (duracion <= umbralDobleToque)
