@@ -1,205 +1,95 @@
-# PlantillaProyecto
+# Punch-Out: Juego de Boxeo
 
-Este es el template oficial para los proyectos de la materia Proyecto 252. Sigue las instrucciones para configurar tu proyecto y sincronizarlo automáticamente con la galería de CETUS.
+## Descripción General
 
-## 📋 Estructura Requerida 
+Punch-Out es un juego de boxeo en 2D desarrollado en C++ usando la librería SFML (Simple and Fast Multimedia Library). Ofrece una experiencia de combate dinámico donde el jugador se enfrenta a un oponente en emocionantes rounds de boxeo.
 
-Tu repositorio debe seguir esta estructura exacta:
+## Objetivos
 
-```
-proyecto-252/
-├── .github/
-│   └── workflows/
-│       └── publish.yml          ← GitHub Action (ya incluido)
-│
-├── video/
-│   └── demo.mp4                 ← Video de gameplay (max 2 min)
-│
-├── gallery/
-│   └── cover.png                ← Imagen de portada (720x1080)
-│
-├── screenshots/
-│   ├── screenshot1.png          ← Capturas del juego (mínimo 3)
-│   ├── screenshot2.png
-│   └── screenshot3.png
-│
-├── bin/
-│   └── JuegoProyecto.exe        ← Ejecutable del juego
-│
-├── assets/
-│   ├── textures/
-│   ├── sounds/
-│   └── ...                      ← Todos los recursos necesarios
-│
-├── README.md                    ← Este archivo (edítalo con tu proyecto)
-└── .gitignore
-```
+- **Modo Solo/IA**: Derrotar al oponente controlado por inteligencia artificial acertando puños hasta reducir su salud a cero, antes de que el IA te derrote a ti.
+- **Modo 2 Jugadores**: Competir contra otro jugador en partidas de boxeo estratégicas donde ambos tienen oportunidad de ganar.
 
-## 🚀 Cómo Usar Este Template
+## Reglas Principales
 
-### 1. Haz Fork de Este Repositorio
+### Sistema de Salud y Derriba
+- Cada boxeador comienza con 100 puntos de vida (150 en modo Solo para el IA)
+- Al recibir golpes, la salud se reduce
+- Cuando la salud llega a 0, el boxeador es derribado (KO - Knock Out)
+- El primer boxeador en ser derribado pierde el round
+- Se pueden acumular múltiples derriba para intensificar la música de combate
 
-Copia los archivos que te hagan falta o haz fork de este repositorio a tu cuenta de GitHub.
+### Sistema de Energía
+- Los boxeadores poseen energía que se regenera constantemente
+- Cada golpe consume energía
+- Sin suficiente energía, no puedes atacar
+- Bloquear también consume energía pero reduce el daño recibido
 
-### 2. Configura en CETUS
+### Música Dinámica
+- La música de combate se mantiene en un estado normal al inicio
+- Cuando cualquier boxeador acumula 2 derriba, la música cambia a una versión más intensa
+- La música vuelve a la normalidad cuando comienza un nuevo round
 
-1. Ve a [CETUS](https://cetus.logiasimbolica.com)
-2. Inicia sesión con tu cuenta
-3. Ve a **Proyectos** y entra a tu proyecto
-4. En la sección "Repositorio de GitHub", haz clic en **Configurar**
-5. Pega la URL de tu repositorio (por ejemplo: `https://github.com/tu-usuario/mijuego`)
-6. Guarda la configuración
+## Modos de Juego
 
-### 3. Organiza Tus Archivos
+### Modo Solo (Versión Prueba)
+- Juega contra una **Inteligencia Artificial**
+- Los boxeadores se posicionan en el centro de la pantalla
+- El movimiento está **limitado solo a dirección horizontal**
+- El IA no se mueve, solo ataca o se defiende
+- **Dificultad aumentada**:
+  - El IA tiene 150 puntos de vida
+  - El IA dispone de 130 de energía máxima
+  - El IA consume menos energía por golpe (15 vs 22)
+  - El IA regenera energía más rápido
+- **El jugador NO puede bloquear** en este modo
 
-Coloca tus archivos en las carpetas correspondientes siguiendo la estructura de arriba.
+### Modo 2 Jugadores
+- Competencia clásica entre dos jugadores humanos
+- Ambos boxeadores pueden moverse libremente por el ring
+- Ambos pueden atacar y bloquear sin restricciones
+- Mecánicas equilibradas para ambos contendientes
 
-**Requisitos importantes:**
+## Controles
 
-#### Video (`video/demo.mp4`)
+### Ataques y Movimiento
+- **W** - Saltar/Movimiento vertical (Solo modo 2 Jugadores)
+- **A** - Movimiento a la izquierda
+- **D** - Movimiento a la derecha
+- **ESPACIO** - Atacar/Golpear
+- **S** - Bloquear (Solo modo 2 Jugadores)
 
-- Duración máxima: **2 minutos**
-- Formato: MP4
-- Contenido: Gameplay mostrando las características principales de tu juego
-- Resolución recomendada: 1280x720 o superior
+### Menú y Opciones
+- **O** - Abrir/Cerrar menú de opciones durante el combate
+- **U** - Salir del juego (desde el menú de opciones)
+- **ESPACIO** - Reiniciar el juego después de un KO
 
-#### Portada (`gallery/cover.png`)
+### Selección de Modo
+- En el menú principal, selecciona:
+  - **Modo A (Blanco)**: Juega en Modo Solo contra la IA
+  - **Modo B (Amarillo)**: Juega en Modo 2 Jugadores
 
-- Dimensiones: **720x1080 pixels** (vertical)
-- Formato: PNG
-- Representa visualmente tu juego (puede ser logo + screenshot)
 
-#### Screenshots (`screenshots/*.png`)
+### Sistemas del Juego
+- **Motor Físico Simplificado**: Posicionamiento y colisiones básicas
+- **Sistema de Inteligencia Artificial**: Máquina de estados con selección de acciones aleatoria
+- **Sistema de Audio Dinámico**: Música que responde al estado del juego
+- **Interfaz Gráfica**: Menús de selección, indicadores de salud, energía y derriba
 
-- Mínimo: **3 capturas**
-- Dimensiones: **1080x720 pixels** cada una
-- Formato: PNG
-- Muestra diferentes aspectos del juego
+### Componentes Principales
+- Sistema de salud y regeneración
+- Sistema de energía y consumo
+- Animaciones de ataque, bloqueo, daño y KO
+- Gestión de rounds y contador de victorias
+- Menú de opciones en juego
 
-#### Ejecutable (`bin/*.exe`)
+## Cómo Jugar
 
-- Incluye el `.exe` principal de tu juego
-- Si necesitas DLLs adicionales, inclúyelas también
+1. **Selecciona el modo de juego** en la pantalla inicial
+2. **Entrena tu estrategia**:
+   - En modo Solo: Aprende los patrones del IA
+   - En modo 2 Jugadores: Coordina tus acciones con tu oponente
+3. **Gestiona tu energía** - No malgastes golpes
+4. **Usa el bloqueo estratégicamente** - Reduce el daño pero consume energía
+5. **Derriba a tu oponente** - Reduce su salud a 0 para ganar el round
+6. **Gana múltiples rounds** - Acumula derriba para intensificar la acción
 
-#### Assets (`assets/`)
-
-- Todos los recursos que tu juego necesita para funcionar
-- Texturas, sonidos, música, modelos 3D, etc.
-- Organiza en subcarpetas
-
-#### README.md
-
-- Edita este archivo con la descripción de tu proyecto
-- Incluye: objetivo, controles, mecánicas, créditos
-
-### 4. Publica Tu Proyecto
-
-Cada vez que hagas **push a la rama `main`**, el GitHub Action se ejecutará automáticamente y:
-
-1. ✅ Empaquetará tu ejecutable y assets en un ZIP
-2. ✅ Creará un Release con versión automática
-3. ✅ Notificará a CETUS para actualizar la galería
-4. ✅ Tu proyecto aparecerá en https://cetus.logiasimbolica.com/galeria
-
-**No necesitas hacer nada más** - la sincronización es automática.
-
-## 🔄 Flujo de Trabajo
-
-```
-1. Desarrollas tu juego localmente
-2. Actualizas archivos en las carpetas correspondientes
-3. git add . && git commit -m "Actualización X"
-4. git push origin main
-5. GitHub Action se ejecuta automáticamente
-6. ✨ Tu proyecto se actualiza en la galería
-```
-
-## ⚠️ Validaciones
-
-El sistema validará automáticamente:
-
-- ✓ Repositorio configurado en CETUS
-- ✓ Estructura de carpetas correcta
-- ✓ Video existe y es accesible
-- ✓ Portada existe (cover.png)
-- ✓ Mínimo 3 screenshots
-- ✓ Ejecutable existe
-- ✓ README.md presente
-
-Si algo falla, recibirás un error en el log del GitHub Action.
-
-## 📊 Tracking de Progreso
-
-Cada commit que hagas se registrará en CETUS para evaluar:
-
-- Frecuencia de commits
-- Progreso a lo largo del tiempo
-- Contribuciones de cada integrante
-
-Asegúrate de hacer commits significativos con mensajes descriptivos.
-
-## 🆘 Problemas Comunes
-
-### El Action falla
-
-- Verifica que todas las carpetas existan
-- Revisa que los archivos tengan los nombres exactos
-- Asegúrate de que el repo sea público
-
-### No aparece en la galería
-
-- Confirma que registraste la URL en CETUS
-- Verifica que el push fue a la rama `main`
-- Revisa los logs del Action en GitHub
-
-### El ejecutable no se descarga
-
-- Asegúrate de que el Release se creó exitosamente
-- Verifica que el ZIP contiene bin/ y assets/
-
-## 📝 Descripción del Proyecto
-
-**[Edita esta sección con la información de tu juego]**
-
-### 🎯 Objetivo del Juego
-
-Describe aquí el objetivo principal de tu juego.
-
-### 🎮 Controles
-
-Lista los controles:
-
-- W/A/S/D: Movimiento
-- Space: Saltar
-- Mouse: Apuntar/Disparar
-- etc.
-
-### ⚙️ Mecánicas
-
-Explica las mecánicas principales de tu juego.
-
-### 🏆 Características
-
-- Feature 1
-- Feature 2
-- Feature 3
-
-### 👥 Equipo
-
-- **Líder**: Nombre Completo (@usuario-github)
-- **Integrante 2**: Nombre Completo (@usuario-github)
-- **Integrante 3**: Nombre Completo (@usuario-github)
-
-### 🛠️ Tecnologías
-
-- Motor/Framework: Unity/Godot/Unreal/etc.
-- Lenguaje: C#/C++/Python/etc.
-- Librerías adicionales: ...
-
-### 📜 Créditos
-
-- Assets de terceros utilizados
-- Referencias o inspiraciones
-- Agradecimientos
-
----
