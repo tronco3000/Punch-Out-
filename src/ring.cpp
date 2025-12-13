@@ -20,7 +20,7 @@ int main()
 	}
 
 	Vector2u dimensionesRing = texturaRing.getSize();
-	const float escalaRing = 2.5f;
+	const float escalaRing = 2.125f;
 	Vector2u dimensionesVentana(static_cast<unsigned int>(dimensionesRing.x * escalaRing),
 		static_cast<unsigned int>(dimensionesRing.y * escalaRing));
 	RenderWindow ventanaRing(VideoMode(dimensionesVentana.x, dimensionesVentana.y), "Boxing", Style::Close);
@@ -518,6 +518,9 @@ int main()
 	bool animacionKnockdownIniciadaRojo = false;
 	bool animacionKnockdownIniciadaAzul = false;
 	bool jugadorRojoEliminado = false;
+
+	// Menú de opciones durante el combate
+	bool pantallaOpcionesActiva = false;
 	bool jugadorAzulEliminado = false;
 	bool jugadorRojoGanador = false;
 	bool jugadorAzulGanador = false;
@@ -555,6 +558,30 @@ int main()
 	textoCuentaPrevia.setFillColor(Color::Yellow);
 	textoCuentaPrevia.setString("3");
 
+	// Menú de opciones durante el combate
+	Text tituloOpciones;
+	tituloOpciones.setFont(fuenteJuego);
+	tituloOpciones.setCharacterSize(72);
+	tituloOpciones.setFillColor(Color::Yellow);
+	tituloOpciones.setString("OPCIONES");
+
+	Text opcionReanudar;
+	opcionReanudar.setFont(fuenteJuego);
+	opcionReanudar.setCharacterSize(48);
+	opcionReanudar.setFillColor(Color::White);
+	opcionReanudar.setString("Reanudar Combate (O)");
+
+	Text opcionVolverMenu;
+	opcionVolverMenu.setFont(fuenteJuego);
+	opcionVolverMenu.setCharacterSize(48);
+	opcionVolverMenu.setFillColor(Color::White);
+	opcionVolverMenu.setString("Salir del Juego (U)");
+
+	Text indicadorOpciones;
+	indicadorOpciones.setFont(fuenteJuego);
+	indicadorOpciones.setCharacterSize(24);
+	indicadorOpciones.setFillColor(Color::Cyan);
+	indicadorOpciones.setString("Opciones (O)");
 
 	Text instruccionesClasico;
 	instruccionesClasico.setFont(fuenteJuego);
@@ -965,37 +992,30 @@ int main()
 		opcionSolo.setFont(fuenteJuego);
 		opcionSolo.setString("A. SOLO (vs IA)");
 		opcionSolo.setCharacterSize(56);
-		opcionSolo.setFillColor(opcionSeleccionada == 0 ? Color::Yellow : Color(180, 180, 180));
+		opcionSolo.setFillColor(Color::White);
 		const FloatRect limSolo = opcionSolo.getLocalBounds();
 		opcionSolo.setOrigin(limSolo.left + (limSolo.width * 0.5f), limSolo.top + (limSolo.height * 0.5f));
 		opcionSolo.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 300.0f);
+
+		// Nota de versión prueba para IA
+		Text notaPrueba;
+		notaPrueba.setFont(fuenteJuego);
+		notaPrueba.setString("[VERSIÓN PRUEBA]");
+		notaPrueba.setCharacterSize(20);
+		notaPrueba.setFillColor(Color(255, 165, 0));
+		const FloatRect limNotaPrueba = notaPrueba.getLocalBounds();
+		notaPrueba.setOrigin(limNotaPrueba.left + (limNotaPrueba.width * 0.5f), limNotaPrueba.top);
+		notaPrueba.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 365.0f);
 
 		// Opción 2: 2 Jugadores
 		Text opcion2Jugadores;
 		opcion2Jugadores.setFont(fuenteJuego);
 		opcion2Jugadores.setString("B. 2 JUGADORES");
 		opcion2Jugadores.setCharacterSize(56);
-		opcion2Jugadores.setFillColor(opcionSeleccionada == 1 ? Color::Yellow : Color(180, 180, 180));
+		opcion2Jugadores.setFillColor(Color::Yellow);
 		const FloatRect lim2J = opcion2Jugadores.getLocalBounds();
 		opcion2Jugadores.setOrigin(lim2J.left + (lim2J.width * 0.5f), lim2J.top + (lim2J.height * 0.5f));
-		opcion2Jugadores.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 420.0f);
-
-		// Descripción
-		Text descripcion;
-		descripcion.setFont(fuenteJuego);
-		if (opcionSeleccionada == 0)
-		{
-			descripcion.setString("Juega contra una IA desafiante");
-		}
-		else
-		{
-			descripcion.setString("Juega contra otro jugador en local");
-		}
-		descripcion.setCharacterSize(28);
-		descripcion.setFillColor(Color(160, 160, 160));
-		const FloatRect limDesc = descripcion.getLocalBounds();
-		descripcion.setOrigin(limDesc.left + (limDesc.width * 0.5f), limDesc.top);
-		descripcion.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 540.0f);
+		opcion2Jugadores.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 450.0f);
 
 		// Texto parpadeante de instrucciones
 		Text instruccionesSeleccion;
@@ -1016,8 +1036,8 @@ int main()
 
 		ventanaRing.draw(tituloModo);
 		ventanaRing.draw(opcionSolo);
+		ventanaRing.draw(notaPrueba);
 		ventanaRing.draw(opcion2Jugadores);
-		ventanaRing.draw(descripcion);
 		ventanaRing.draw(instruccionesSeleccion);
 
 		ventanaRing.display();
@@ -1459,27 +1479,68 @@ int main()
 			{
 				ventanaRing.close();
 			}
-			else if (eventoVentana.type == Event::KeyPressed && !pausaPorKnockdown && !juegoTerminado)
+			else if (eventoVentana.type == Event::KeyPressed)
 			{
-				if (faseCuentaPrevia)
+				// Permitir abrir/cerrar opciones en cualquier momento durante el combate
+				if (eventoVentana.key.code == Keyboard::O && !faseCuentaPrevia && !juegoTerminado)
+				{
+					pantallaOpcionesActiva = !pantallaOpcionesActiva;
+					continue;
+				}
+				// Volver al menú principal desde opciones
+				if (eventoVentana.key.code == Keyboard::U && pantallaOpcionesActiva)
+				{
+					ventanaRing.close();
+					continue;
+				}
+				// Permitir reiniciar cuando el juego ha terminado
+				if (eventoVentana.key.code == Keyboard::Space && juegoTerminado)
+				{
+					sonidoGolpe.play();
+					if (jugadorAzulGanador)
+					{
+						reproducirAnimacionHitman("win", true);
+					}
+					if (jugadorRojoGanador)
+					{
+						reproducirAnimacionClasico("win", true);
+					}
+					numeroRound++;
+					textoRound.setString("ROUND " + std::to_string(numeroRound));
+					const FloatRect limRound = textoRound.getLocalBounds();
+					textoRound.setOrigin(limRound.left + (limRound.width * 0.5f), limRound.top);
+					reiniciarPartida();
+					relojEntrada.restart();
+					relojDelta.restart();
+					relojParpadeo.restart();
+					continue;
+				}
+				// Resto de controles solo si no hay menú de opciones activo
+				if (pantallaOpcionesActiva)
 				{
 					continue;
 				}
-				const float instante = relojEntrada.getElapsedTime().asSeconds();
-				
-				// Si estamos en modo solo, ignorar controles del Hitman
-				bool esControlHitman = (eventoVentana.key.code == Keyboard::Left || 
-										eventoVentana.key.code == Keyboard::Right || 
-										eventoVentana.key.code == Keyboard::Up || 
-										eventoVentana.key.code == Keyboard::Down || 
-										eventoVentana.key.code == Keyboard::Enter);
-				
-				if (modoSolo && esControlHitman)
+				if (!pausaPorKnockdown && !juegoTerminado)
 				{
-					continue; // Ignorar estos controles en modo solo
-				}
-				
-				switch (eventoVentana.key.code)
+					if (faseCuentaPrevia)
+					{
+						continue;
+					}
+					const float instante = relojEntrada.getElapsedTime().asSeconds();
+					
+					// Si estamos en modo solo, ignorar controles del Hitman
+					bool esControlHitman = (eventoVentana.key.code == Keyboard::Left || 
+											eventoVentana.key.code == Keyboard::Right || 
+											eventoVentana.key.code == Keyboard::Up || 
+											eventoVentana.key.code == Keyboard::Down || 
+											eventoVentana.key.code == Keyboard::Enter);
+					
+					if (modoSolo && esControlHitman)
+					{
+						continue; // Ignorar estos controles en modo solo
+					}
+					
+					switch (eventoVentana.key.code)
 				{
 				case Keyboard::Left:
 				{
@@ -1714,28 +1775,6 @@ int main()
 				default:
 					break;
 				}
-			}
-			else if (eventoVentana.type == Event::KeyPressed && juegoTerminado)
-			{
-				if (eventoVentana.key.code == Keyboard::Space)
-				{
-					sonidoGolpe.play();
-					if (jugadorAzulGanador)
-					{
-						reproducirAnimacionHitman("win", true);
-					}
-					if (jugadorRojoGanador)
-					{
-						reproducirAnimacionClasico("win", true);
-					}
-					numeroRound++;
-					textoRound.setString("ROUND " + std::to_string(numeroRound));
-					const FloatRect limRound = textoRound.getLocalBounds();
-					textoRound.setOrigin(limRound.left + (limRound.width * 0.5f), limRound.top);
-					reiniciarPartida();
-					relojEntrada.restart();
-					relojDelta.restart();
-					relojParpadeo.restart();
 				}
 			}
 			else if (eventoVentana.type == Event::KeyReleased)
@@ -1885,6 +1924,14 @@ int main()
 		dibujarDerribos(derribosHitman, false);
 		ventanaRing.draw(instruccionesClasico);
 		ventanaRing.draw(instruccionesHitman);
+		
+		// Dibujar indicador de opciones en la parte superior derecha
+		if (!faseCuentaPrevia && !juegoTerminado && !pantallaOpcionesActiva)
+		{
+			indicadorOpciones.setPosition(static_cast<float>(dimensionesVentana.x) - 200.0f, 20.0f);
+			ventanaRing.draw(indicadorOpciones);
+		}
+		
 		if (!faseCuentaPrevia && !juegoTerminado)
 		{
 			ventanaRing.draw(textoRound);
@@ -1933,6 +1980,34 @@ int main()
 				textoReinicio.setPosition(centroX, centroY + 90.0f);
 				ventanaRing.draw(textoReinicio);
 			}
+		}
+		
+		// Dibujar menú de opciones si está activo
+		if (pantallaOpcionesActiva)
+		{
+			// Fondo oscuro semi-transparente
+			RectangleShape fondoOscuro(Vector2f(static_cast<float>(dimensionesVentana.x), static_cast<float>(dimensionesVentana.y)));
+			fondoOscuro.setPosition(0.0f, 0.0f);
+			fondoOscuro.setFillColor(Color(0, 0, 0, 200)); // Negro con transparencia
+			ventanaRing.draw(fondoOscuro);
+			
+			// Título de opciones
+			const FloatRect limTitulo = tituloOpciones.getLocalBounds();
+			tituloOpciones.setOrigin(limTitulo.left + (limTitulo.width * 0.5f), limTitulo.top + (limTitulo.height * 0.5f));
+			tituloOpciones.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, static_cast<float>(dimensionesVentana.y) * 0.25f);
+			ventanaRing.draw(tituloOpciones);
+			
+			// Opción 1: Reanudar
+			const FloatRect limReanudar = opcionReanudar.getLocalBounds();
+			opcionReanudar.setOrigin(limReanudar.left + (limReanudar.width * 0.5f), limReanudar.top + (limReanudar.height * 0.5f));
+			opcionReanudar.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, static_cast<float>(dimensionesVentana.y) * 0.45f);
+			ventanaRing.draw(opcionReanudar);
+			
+			// Opción 2: Volver al menú
+			const FloatRect limVolver = opcionVolverMenu.getLocalBounds();
+			opcionVolverMenu.setOrigin(limVolver.left + (limVolver.width * 0.5f), limVolver.top + (limVolver.height * 0.5f));
+			opcionVolverMenu.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, static_cast<float>(dimensionesVentana.y) * 0.60f);
+			ventanaRing.draw(opcionVolverMenu);
 		}
 		ventanaRing.display();
 	}
