@@ -305,6 +305,17 @@ int main()
 	int vidasClasico = 3;
 	int vidasHitman = 3;
 	int numeroRound = 1;
+	
+	// Contadores de derribos (knockdowns)
+	int derribosClasico = 0;
+	int derribosHitman = 0;
+
+	// Variables para IA del Hitman en modo Solo
+	Clock relojIAHitman;
+	float tiempoProximaAccion = 0.0f;
+	const float tiempoMinAccion = 0.3f;
+	const float tiempoMaxAccion = 1.5f;
+	int accionIAHitman = 0; // 0=idle, 1=atacar, 2=bloqueo, 3=movimiento
 
 	auto configurarTransformacionesClasico = [&](AnimationClip* clip)
 	{
@@ -483,6 +494,14 @@ int main()
 	Clock relojKnockdown;
 	bool mostrarTextoContinuar = true;
 	const float intervaloParpadeo = 0.65f;
+	
+	// Pantalla de selección de modo de juego
+	bool pantallaModoActiva = true;
+	bool modoSolo = false; // true para Solo, false para 2 Jugadores
+	int opcionSeleccionada = 0; // 0 para "Solo", 1 para "2 Jugadores"
+	Clock relojParpadeoModo;
+	bool mostrarSeleccionModo = true;
+	
 	bool pantallaCargaActiva = true;
 	bool faseCuentaPrevia = true;
 	float tiempoCuentaPrevia = 3.0f;
@@ -582,6 +601,8 @@ int main()
 		vidasClasico = 3;
 		vidasHitman = 3;
 		numeroRound = 1;
+		derribosClasico = 0;
+		derribosHitman = 0;
 		bloqueoActivo = false;
 		bloqueoHitman = false;
 		instanteUltimoAbajo = -100.0f;
@@ -888,6 +909,130 @@ int main()
 
 	reiniciarPartida();
 
+	// Pantalla de selección de modo de juego
+	while (ventanaRing.isOpen() && pantallaModoActiva)
+	{
+		Event eventoModo;
+		while (ventanaRing.pollEvent(eventoModo))
+		{
+			if (eventoModo.type == Event::Closed)
+			{
+				ventanaRing.close();
+			}
+			else if (eventoModo.type == Event::KeyPressed)
+			{
+				if (eventoModo.key.code == Keyboard::A)
+				{
+					sonidoGolpe.play();
+					modoSolo = true;
+					opcionSeleccionada = 0;
+					pantallaModoActiva = false;
+				}
+				else if (eventoModo.key.code == Keyboard::B)
+				{
+					sonidoGolpe.play();
+					modoSolo = false;
+					opcionSeleccionada = 1;
+					pantallaModoActiva = false;
+				}
+			}
+		}
+
+		if (!ventanaRing.isOpen())
+		{
+			break;
+		}
+
+		if (relojParpadeoModo.getElapsedTime().asSeconds() >= 0.65f)
+		{
+			mostrarSeleccionModo = !mostrarSeleccionModo;
+			relojParpadeoModo.restart();
+		}
+
+		ventanaRing.clear(Color::Black);
+		ventanaRing.draw(lienzoRing);
+
+		// Título
+		Text tituloModo;
+		tituloModo.setFont(fuenteJuego);
+		tituloModo.setString("SELECCIONAR MODO");
+		tituloModo.setCharacterSize(96);
+		tituloModo.setFillColor(Color(220, 220, 220));
+		const FloatRect limTituloModo = tituloModo.getLocalBounds();
+		tituloModo.setOrigin(limTituloModo.left + (limTituloModo.width * 0.5f), limTituloModo.top + (limTituloModo.height * 0.5f));
+		tituloModo.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 100.0f);
+
+		// Opción 1: Solo
+		Text opcionSolo;
+		opcionSolo.setFont(fuenteJuego);
+		opcionSolo.setString("A. SOLO (vs IA)");
+		opcionSolo.setCharacterSize(56);
+		opcionSolo.setFillColor(opcionSeleccionada == 0 ? Color::Yellow : Color(180, 180, 180));
+		const FloatRect limSolo = opcionSolo.getLocalBounds();
+		opcionSolo.setOrigin(limSolo.left + (limSolo.width * 0.5f), limSolo.top + (limSolo.height * 0.5f));
+		opcionSolo.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 300.0f);
+
+		// Opción 2: 2 Jugadores
+		Text opcion2Jugadores;
+		opcion2Jugadores.setFont(fuenteJuego);
+		opcion2Jugadores.setString("B. 2 JUGADORES");
+		opcion2Jugadores.setCharacterSize(56);
+		opcion2Jugadores.setFillColor(opcionSeleccionada == 1 ? Color::Yellow : Color(180, 180, 180));
+		const FloatRect lim2J = opcion2Jugadores.getLocalBounds();
+		opcion2Jugadores.setOrigin(lim2J.left + (lim2J.width * 0.5f), lim2J.top + (lim2J.height * 0.5f));
+		opcion2Jugadores.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 420.0f);
+
+		// Descripción
+		Text descripcion;
+		descripcion.setFont(fuenteJuego);
+		if (opcionSeleccionada == 0)
+		{
+			descripcion.setString("Juega contra una IA desafiante");
+		}
+		else
+		{
+			descripcion.setString("Juega contra otro jugador en local");
+		}
+		descripcion.setCharacterSize(28);
+		descripcion.setFillColor(Color(160, 160, 160));
+		const FloatRect limDesc = descripcion.getLocalBounds();
+		descripcion.setOrigin(limDesc.left + (limDesc.width * 0.5f), limDesc.top);
+		descripcion.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 540.0f);
+
+		// Texto parpadeante de instrucciones
+		Text instruccionesSeleccion;
+		instruccionesSeleccion.setFont(fuenteJuego);
+		instruccionesSeleccion.setString("(Presiona A o B para seleccionar)");
+		instruccionesSeleccion.setCharacterSize(24);
+		if (mostrarSeleccionModo)
+		{
+			instruccionesSeleccion.setFillColor(Color::Cyan);
+		}
+		else
+		{
+			instruccionesSeleccion.setFillColor(Color(100, 100, 100));
+		}
+		const FloatRect limInstrSel = instruccionesSeleccion.getLocalBounds();
+		instruccionesSeleccion.setOrigin(limInstrSel.left + (limInstrSel.width * 0.5f), limInstrSel.top);
+		instruccionesSeleccion.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 620.0f);
+
+		ventanaRing.draw(tituloModo);
+		ventanaRing.draw(opcionSolo);
+		ventanaRing.draw(opcion2Jugadores);
+		ventanaRing.draw(descripcion);
+		ventanaRing.draw(instruccionesSeleccion);
+
+		ventanaRing.display();
+	}
+
+	mostrarSeleccionModo = true;
+	relojParpadeoModo.restart();
+
+	if (!ventanaRing.isOpen())
+	{
+		return 0;
+	}
+
 	while (ventanaRing.isOpen() && pantallaCargaActiva)
 	{
 		Event eventoCarga;
@@ -950,6 +1095,183 @@ int main()
 		animacionActual->update(segundosDelta);
 		animacionJabReposo.update(segundosDelta);
 		animacionHitmanActual->update(segundosDelta);
+		
+		// ===== LÓGICA DE IA PARA MODO SOLO =====
+		if (modoSolo && !faseCuentaPrevia && !juegoTerminado && !pausaPorKnockdown)
+		{
+			tiempoProximaAccion -= segundosDelta;
+			const float distanciaAlJugador = std::abs(posicionHitman.x - posicionBoxeador.x);
+			
+			if (tiempoProximaAccion <= 0.0f)
+			{
+				// Decidir siguiente acción
+				const float factorVida = vidaHitman / vidaMaximaHitman;
+				const float factorEnergia = energiaHitman / energiaMaximaHitman;
+				
+				// Probabilidades basadas en situación
+				int accionRandomica = rand() % 100;
+				
+				if (distanciaAlJugador > 150.0f)
+				{
+					// Está lejos: acercarse
+					accionIAHitman = 3; // Movimiento
+				}
+				else if (factorVida < 0.3f && factorEnergia >= 0.4f)
+				{
+					// Vida baja y energía disponible: atacar agresivamente
+					accionIAHitman = 1; // Ataque
+				}
+				else if (accionRandomica < 40)
+				{
+					// 40% atacar
+					if (factorEnergia >= 0.3f)
+					{
+						accionIAHitman = 1;
+					}
+					else
+					{
+						accionIAHitman = 0;
+					}
+				}
+				else if (accionRandomica < 65)
+				{
+					// 25% bloquear
+					if (factorVida < 0.5f)
+					{
+						accionIAHitman = 2; // Bloqueo defensivo
+					}
+					else
+					{
+						accionIAHitman = 3; // Movimiento
+					}
+				}
+				else
+				{
+					// 35% movimiento
+					accionIAHitman = 3;
+				}
+				
+				tiempoProximaAccion = tiempoMinAccion + (rand() % 1000) * (tiempoMaxAccion - tiempoMinAccion) / 1000.0f;
+			}
+			
+			// Ejecutar acción de IA
+			switch (accionIAHitman)
+			{
+				case 1: // Ataque
+				{
+					if (energiaHitman >= costoGolpeHitman && distanciaAlJugador < 120.0f)
+					{
+						energiaHitman = std::max(0.0f, energiaHitman - costoGolpeHitman);
+						sonidoGolpe.play();
+						
+						// Verificar si golpea al jugador
+						const float distanciaAlGolpe = std::abs(posicionHitman.x - posicionBoxeador.x);
+						if (distanciaAlGolpe < 100.0f)
+						{
+							if (bloqueoActivo && escudoClasico > 0.0f)
+							{
+								escudoClasico = std::max(0.0f, escudoClasico - 1.0f);
+								reproducirAnimacionClasico("block-hit", false);
+								restaurarBloqueClasico = true;
+							}
+							else
+							{
+								vidaClasico = std::max(0.0f, vidaClasico - danoGolpeRecibidoClasico);
+								const int variante = rand() % 3;
+								const char* danoAnim = (variante == 0 ? "damage-1" : (variante == 1 ? "damage-2" : "damage-3"));
+								reproducirAnimacionClasico(danoAnim, false);
+								
+								if (vidaClasico <= 0.0f)
+								{
+									vidasClasico -= 1;
+									derribosHitman++;
+									if (vidasClasico > 0)
+									{
+										relojKnockdown.restart();
+										pausaPorKnockdown = true;
+										tiempoKnockdownRestante = 3.0f;
+										ultimoConteo = 0;
+										textoCuentaRegresiva.setString("3");
+										const FloatRect limKD = textoCuentaRegresiva.getLocalBounds();
+										textoCuentaRegresiva.setOrigin(limKD.left + (limKD.width * 0.5f), limKD.top + (limKD.height * 0.5f));
+										ultimoKnockdownRojo = true;
+										ultimoKnockdownAzul = false;
+										animacionKnockdownIniciadaRojo = false;
+									}
+									else
+									{
+										reproducirAnimacionClasico("knockout", false);
+										reproducirAnimacionHitman("win", true);
+										sonidoKoFinal.play();
+										juegoTerminado = true;
+										ganadorTexto = "K.O";
+										colorGanador = Color::Cyan;
+										jugadorRojoEliminado = true;
+										jugadorAzulGanador = true;
+									}
+								}
+							}
+						}
+						
+						const string& animacionGolpe = comboGolpesHitman[indiceGolpeHitman];
+						reproducirAnimacionHitman(animacionGolpe.c_str(), false);
+						indiceGolpeHitman = (indiceGolpeHitman + 1) % comboGolpesHitman.size();
+					}
+					break;
+				}
+				case 2: // Bloqueo
+				{
+					bloqueoHitman = true;
+					escudoHitmanActivo = true;
+					reproducirAnimacionHitman("block", true);
+					break;
+				}
+				case 3: // Movimiento
+				{
+					if (distanciaAlJugador > 100.0f)
+					{
+						// Acercarse al jugador
+						if (posicionHitman.x > posicionBoxeador.x)
+						{
+							posicionHitman.x -= desplazamientoPaso * 1.5f;
+						}
+						else
+						{
+							posicionHitman.x += desplazamientoPaso * 1.5f;
+						}
+						reproducirAnimacionHitman("forward-walk", false);
+					}
+					else
+					{
+						// Movimiento aleatorio alrededor del jugador
+						if (rand() % 2 == 0)
+						{
+							posicionHitman.x -= desplazamientoPaso;
+							reproducirAnimacionHitman("back-walk", false);
+						}
+						else
+						{
+							posicionHitman.x += desplazamientoPaso;
+							reproducirAnimacionHitman("forward-walk", false);
+						}
+					}
+					aplicarPosicionHitman();
+					break;
+				}
+				default:
+				{
+					// Reposo
+					if (bloqueoHitman)
+					{
+						bloqueoHitman = false;
+						escudoHitmanActivo = false;
+					}
+					reproducirAnimacionHitman("idle", true);
+					animacionHitmanActual = hitmanReposo;
+					break;
+				}
+			}
+		}
 		
 		// Alternar canciones de combate cada 90 segundos
 		if (!faseCuentaPrevia && !juegoTerminado)
@@ -1139,6 +1461,19 @@ int main()
 					continue;
 				}
 				const float instante = relojEntrada.getElapsedTime().asSeconds();
+				
+				// Si estamos en modo solo, ignorar controles del Hitman
+				bool esControlHitman = (eventoVentana.key.code == Keyboard::Left || 
+										eventoVentana.key.code == Keyboard::Right || 
+										eventoVentana.key.code == Keyboard::Up || 
+										eventoVentana.key.code == Keyboard::Down || 
+										eventoVentana.key.code == Keyboard::Enter);
+				
+				if (modoSolo && esControlHitman)
+				{
+					continue; // Ignorar estos controles en modo solo
+				}
+				
 				switch (eventoVentana.key.code)
 				{
 				case Keyboard::Left:
@@ -1323,6 +1658,7 @@ int main()
 						if (vidaHitman <= 0.0f)
 						{
 							vidasHitman -= 1;
+							derribosClasico++;
 							if (vidasHitman > 0)
 							{
 								relojKnockdown.restart();
@@ -1490,8 +1826,43 @@ int main()
 				ventanaRing.draw(sprite);
 			}
 		};
+		
+		// Función para dibujar contadores de derribos (knockdowns)
+		auto dibujarDerribos = [&](int derribosRestantes, bool esRojo)
+		{
+			const float radioBolita = 8.0f;
+			const float espacioBolitas = 22.0f;
+			const Color colorRojo = Color::Red;
+			const Color colorAzul = Color(180, 245, 255);
+			
+			for (int i = 0; i < 3; ++i)
+			{
+				const bool lleno = i < derribosRestantes;
+				CircleShape bolita(radioBolita);
+				
+				if (esRojo)
+				{
+					bolita.setFillColor(lleno ? colorRojo : Color(255, 0, 0, 100));
+				}
+				else
+				{
+					bolita.setFillColor(lleno ? colorAzul : Color(180, 245, 255, 100));
+				}
+				
+				float posX = esRojo
+					? (24.0f + static_cast<float>(i) * espacioBolitas)
+					: (static_cast<float>(dimensionesVentana.x) - (radioBolita * 2.0f + 24.0f) - static_cast<float>(i) * espacioBolitas);
+				float posY = posYCorazones - 35.0f;
+				
+				bolita.setPosition(posX, posY);
+				ventanaRing.draw(bolita);
+			}
+		};
+		
 		dibujarCorazones(vidasClasico, true);
 		dibujarCorazones(vidasHitman, false);
+		dibujarDerribos(derribosClasico, true);
+		dibujarDerribos(derribosHitman, false);
 		ventanaRing.draw(instruccionesClasico);
 		ventanaRing.draw(instruccionesHitman);
 		if (!faseCuentaPrevia && !juegoTerminado)
