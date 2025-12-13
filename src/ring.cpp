@@ -304,6 +304,7 @@ int main()
 	bool escudoHitmanActivo = false;
 	int vidasClasico = 3;
 	int vidasHitman = 3;
+	int numeroRound = 1;
 
 	auto configurarTransformacionesClasico = [&](AnimationClip* clip)
 	{
@@ -556,6 +557,16 @@ int main()
 	instruccionesHitman.setOrigin(limitesInstruccionesHitman.width, limitesInstruccionesHitman.top + (limitesInstruccionesHitman.height * 0.5f));
 	instruccionesHitman.setPosition(static_cast<float>(dimensionesVentana.x) - 24.0f, static_cast<float>(dimensionesVentana.y) - 40.0f);
 
+	// Texto de Round
+	Text textoRound;
+	textoRound.setFont(fuenteJuego);
+	textoRound.setString("ROUND 1");
+	textoRound.setCharacterSize(48);
+	textoRound.setFillColor(Color(220, 220, 220));
+	const FloatRect limitesRound = textoRound.getLocalBounds();
+	textoRound.setOrigin(limitesRound.left + (limitesRound.width * 0.5f), limitesRound.top);
+	textoRound.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 20.0f);
+
 	auto reiniciarPartida = [&]()
 	{
 		posicionBoxeador = posicionBoxeadorInicial;
@@ -570,6 +581,7 @@ int main()
 		escudoHitmanActivo = false;
 		vidasClasico = 3;
 		vidasHitman = 3;
+		numeroRound = 1;
 		bloqueoActivo = false;
 		bloqueoHitman = false;
 		instanteUltimoAbajo = -100.0f;
@@ -748,6 +760,12 @@ int main()
 				{
 					sonidoGolpe.play();
 					pantallaInstruccionesActiva = false;
+				}
+				else if (eventoInstrucciones.key.code == Keyboard::A)
+				{
+					sonidoGolpe.play();
+					pantallaInstruccionesActiva = false;
+					pantallaMenuActiva = true;
 				}
 			}
 		}
@@ -1083,12 +1101,20 @@ int main()
 				if (ultimoKnockdownRojo && vidasClasico > 0)
 				{
 					vidaClasico = vidaMaximaClasico;
+					numeroRound++;
+					textoRound.setString("ROUND " + std::to_string(numeroRound));
+					const FloatRect limRound = textoRound.getLocalBounds();
+					textoRound.setOrigin(limRound.left + (limRound.width * 0.5f), limRound.top);
 					reproducirAnimacionClasico("idle", true);
 					animacionActual = animacionReposo;
 				}
 				if (ultimoKnockdownAzul && vidasHitman > 0)
 				{
 					vidaHitman = vidaMaximaHitman;
+					numeroRound++;
+					textoRound.setString("ROUND " + std::to_string(numeroRound));
+					const FloatRect limRound = textoRound.getLocalBounds();
+					textoRound.setOrigin(limRound.left + (limRound.width * 0.5f), limRound.top);
 					reproducirAnimacionHitman("idle", true);
 					animacionHitmanActual = hitmanReposo;
 				}
@@ -1346,6 +1372,10 @@ int main()
 					{
 						reproducirAnimacionClasico("win", true);
 					}
+					numeroRound++;
+					textoRound.setString("ROUND " + std::to_string(numeroRound));
+					const FloatRect limRound = textoRound.getLocalBounds();
+					textoRound.setOrigin(limRound.left + (limRound.width * 0.5f), limRound.top);
 					reiniciarPartida();
 					relojEntrada.restart();
 					relojDelta.restart();
@@ -1464,6 +1494,10 @@ int main()
 		dibujarCorazones(vidasHitman, false);
 		ventanaRing.draw(instruccionesClasico);
 		ventanaRing.draw(instruccionesHitman);
+		if (!faseCuentaPrevia && !juegoTerminado)
+		{
+			ventanaRing.draw(textoRound);
+		}
 		if (pausaPorKnockdown && !juegoTerminado)
 		{
 			ventanaRing.draw(textoCuentaRegresiva);
