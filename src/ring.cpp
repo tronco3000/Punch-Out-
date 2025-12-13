@@ -258,9 +258,14 @@ int main()
 	const float escalaBoxeador = 4.0f;
 	const float escalaHitman = 4.0f;
 	const Vector2f posicionBoxeadorInicial(static_cast<float>(dimensionesVentana.x) * 0.5f,
-		static_cast<float>(dimensionesVentana.y) * 0.78f);
+		static_cast<float>(dimensionesVentana.y) * 0.55f);
 	const Vector2f posicionHitmanInicial(static_cast<float>(dimensionesVentana.x) * 0.7f,
-		static_cast<float>(dimensionesVentana.y) * 0.78f);
+		static_cast<float>(dimensionesVentana.y) * 0.55f);
+	// Posiciones iniciales para modo Solo (IA)
+	const Vector2f posicionBoxeadorInicialSolo(static_cast<float>(dimensionesVentana.x) * 0.35f,
+		static_cast<float>(dimensionesVentana.y) * 0.55f);
+	const Vector2f posicionHitmanInicialSolo(static_cast<float>(dimensionesVentana.x) * 0.65f,
+		static_cast<float>(dimensionesVentana.y) * 0.55f);
 	Vector2f posicionBoxeador = posicionBoxeadorInicial;
 	Vector2f posicionHitman = posicionHitmanInicial;
 	vector<string> comboGolpes = { "body-hook", "cross", "hook", "overhand", "uppercut" };
@@ -287,12 +292,20 @@ int main()
 
 	const float vidaMaximaClasico = 80.0f;
 	const float vidaMaximaHitman = 100.0f;
+	// Valores mejorados para IA en modo Solo
+	const float vidaMaximaHitmanSolo = 150.0f; // Mayor resistencia
+	const float energiaMaximaHitmanSolo = 130.0f; // Más energía para golpear
+	const float costoGolpeHitmanSolo = 15.0f; // Menor costo para golpear más seguido
+	const float regeneracionEnergiaHitmanSolo = 14.0f; // Regeneración más rápida
+	const float golpesParaDerrotaHitmanSolo = 15.0f; // Más golpes necesarios para derrotar la IA
+	
 	float vidaClasico = vidaMaximaClasico;
 	float vidaHitman = vidaMaximaHitman;
 	const float golpesParaDerrotaClasico = 8.0f;
 	const float golpesParaDerrotaHitman = 10.0f;
 	const float danoGolpeRecibidoClasico = vidaMaximaClasico / golpesParaDerrotaClasico;
 	const float danoGolpeRecibidoHitman = vidaMaximaHitman / golpesParaDerrotaHitman;
+	const float danoGolpeRecibidoHitmanSolo = vidaMaximaHitmanSolo / golpesParaDerrotaHitmanSolo;
 
 	const float escudoMaximo = 5.0f;
 	float escudoClasico = escudoMaximo;
@@ -613,12 +626,31 @@ int main()
 
 	auto reiniciarPartida = [&]()
 	{
-		posicionBoxeador = posicionBoxeadorInicial;
-		posicionHitman = posicionHitmanInicial;
+		// Usar posiciones diferentes según el modo de juego
+		if (modoSolo)
+		{
+			posicionBoxeador = posicionBoxeadorInicialSolo;
+			posicionHitman = posicionHitmanInicialSolo;
+		}
+		else
+		{
+			posicionBoxeador = posicionBoxeadorInicial;
+			posicionHitman = posicionHitmanInicial;
+		}
 		energiaClasico = energiaMaximaClasico;
-		energiaHitman = energiaMaximaHitman;
-		vidaClasico = vidaMaximaClasico;
-		vidaHitman = vidaMaximaHitman;
+		// En modo Solo, usar valores mejorados para la IA
+		if (modoSolo)
+		{
+			energiaHitman = energiaMaximaHitmanSolo;
+			vidaClasico = vidaMaximaClasico;
+			vidaHitman = vidaMaximaHitmanSolo;
+		}
+		else
+		{
+			energiaHitman = energiaMaximaHitman;
+			vidaClasico = vidaMaximaClasico;
+			vidaHitman = vidaMaximaHitman;
+		}
 		escudoClasico = escudoMaximo;
 		escudoHitman = escudoMaximo;
 		escudoClasicoActivo = false;
@@ -1128,44 +1160,74 @@ int main()
 				// Probabilidades basadas en situación
 				int accionRandomica = rand() % 100;
 				
-				if (distanciaAlJugador > 150.0f)
+				if (modoSolo)
 				{
-					// Está lejos: acercarse
-					accionIAHitman = 3; // Movimiento
-				}
-				else if (factorVida < 0.3f && factorEnergia >= 0.4f)
-				{
-					// Vida baja y energía disponible: atacar agresivamente
-					accionIAHitman = 1; // Ataque
-				}
-				else if (accionRandomica < 40)
-				{
-					// 40% atacar
-					if (factorEnergia >= 0.3f)
+					// En modo Solo, la IA nunca se mueve, solo ataca o se defiende
+					if (factorVida < 0.3f && factorEnergia >= 0.4f)
 					{
-						accionIAHitman = 1;
+						// Vida baja y energía disponible: atacar agresivamente
+						accionIAHitman = 1; // Ataque
+					}
+					else if (accionRandomica < 50)
+					{
+						// 50% atacar
+						if (factorEnergia >= 0.3f)
+						{
+							accionIAHitman = 1;
+						}
+						else
+						{
+							accionIAHitman = 2; // Bloqueo
+						}
 					}
 					else
 					{
-						accionIAHitman = 0;
-					}
-				}
-				else if (accionRandomica < 65)
-				{
-					// 25% bloquear
-					if (factorVida < 0.5f)
-					{
-						accionIAHitman = 2; // Bloqueo defensivo
-					}
-					else
-					{
-						accionIAHitman = 3; // Movimiento
+						// 50% bloquear
+						accionIAHitman = 2;
 					}
 				}
 				else
 				{
-					// 35% movimiento
-					accionIAHitman = 3;
+					// Modo 2 Jugadores (lógica original)
+					if (distanciaAlJugador > 150.0f)
+					{
+						// Está lejos: acercarse
+						accionIAHitman = 3; // Movimiento
+					}
+					else if (factorVida < 0.3f && factorEnergia >= 0.4f)
+					{
+						// Vida baja y energía disponible: atacar agresivamente
+						accionIAHitman = 1; // Ataque
+					}
+					else if (accionRandomica < 40)
+					{
+						// 40% atacar
+						if (factorEnergia >= 0.3f)
+						{
+							accionIAHitman = 1;
+						}
+						else
+						{
+							accionIAHitman = 0;
+						}
+					}
+					else if (accionRandomica < 65)
+					{
+						// 25% bloquear
+						if (factorVida < 0.5f)
+						{
+							accionIAHitman = 2; // Bloqueo defensivo
+						}
+						else
+						{
+							accionIAHitman = 3; // Movimiento
+						}
+					}
+					else
+					{
+						// 35% movimiento
+						accionIAHitman = 3;
+					}
 				}
 				
 				tiempoProximaAccion = tiempoMinAccion + (rand() % 1000) * (tiempoMaxAccion - tiempoMinAccion) / 1000.0f;
@@ -1176,9 +1238,11 @@ int main()
 			{
 				case 1: // Ataque
 				{
-					if (energiaHitman >= costoGolpeHitman && distanciaAlJugador < 120.0f)
+					// En modo Solo, usar costo reducido para la IA
+					const float costoGolpeIAActual = modoSolo ? costoGolpeHitmanSolo : costoGolpeHitman;
+					if (energiaHitman >= costoGolpeIAActual && distanciaAlJugador < 120.0f)
 					{
-						energiaHitman = std::max(0.0f, energiaHitman - costoGolpeHitman);
+						energiaHitman = std::max(0.0f, energiaHitman - costoGolpeIAActual);
 						sonidoGolpe.play();
 						
 						// Verificar si golpea al jugador
@@ -1343,7 +1407,15 @@ int main()
 		if (!faseCuentaPrevia)
 		{
 			energiaClasico = std::min(energiaMaximaClasico, energiaClasico + regeneracionEnergiaClasico * segundosDelta);
-			energiaHitman = std::min(energiaMaximaHitman, energiaHitman + regeneracionEnergiaHitman * segundosDelta);
+			// En modo Solo, usar valores mejorados para la IA
+			if (modoSolo)
+			{
+				energiaHitman = std::min(energiaMaximaHitmanSolo, energiaHitman + regeneracionEnergiaHitmanSolo * segundosDelta);
+			}
+			else
+			{
+				energiaHitman = std::min(energiaMaximaHitman, energiaHitman + regeneracionEnergiaHitman * segundosDelta);
+			}
 			if (!escudoClasicoActivo)
 			{
 				escudoClasico = std::min(escudoMaximo, escudoClasico + regenEscudoPorSegundo * segundosDelta);
@@ -1693,17 +1765,25 @@ int main()
 				}
 				case Keyboard::S:
 				{
-					instanteUltimoAbajo = instante;
-					bloqueoActivo = true;
-					escudoClasicoActivo = true;
-					reproducirAnimacionClasico("block", true);
-					aplicarPosicionClasico();
+					// En modo Solo, el jugador no puede defenderse
+					if (!modoSolo)
+					{
+						instanteUltimoAbajo = instante;
+						bloqueoActivo = true;
+						escudoClasicoActivo = true;
+						reproducirAnimacionClasico("block", true);
+						aplicarPosicionClasico();
+					}
 					break;
 				}
 				case Keyboard::W:
 				{
-					posicionBoxeador.y -= desplazamientoVertical;
-					aplicarPosicionClasico();
+					// En modo Solo, no se permite movimiento vertical
+					if (!modoSolo)
+					{
+						posicionBoxeador.y -= desplazamientoVertical;
+						aplicarPosicionClasico();
+					}
 					break;
 				}
 				case Keyboard::Q:
@@ -1724,7 +1804,9 @@ int main()
 						}
 						else
 						{
-							vidaHitman = std::max(0.0f, vidaHitman - danoGolpeRecibidoHitman);
+							// En modo Solo, usar daño reducido para la IA (más golpes necesarios)
+							const float danioActual = modoSolo ? danoGolpeRecibidoHitmanSolo : danoGolpeRecibidoHitman;
+							vidaHitman = std::max(0.0f, vidaHitman - danioActual);
 							const int variante = rand() % 3;
 							const char* danoAnim = (variante == 0 ? "damage-1" : (variante == 1 ? "damage-2" : "damage-3"));
 							reproducirAnimacionHitman(danoAnim, false);
