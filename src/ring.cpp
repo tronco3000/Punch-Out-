@@ -41,7 +41,25 @@ int main()
 	{
 		return -1;
 	}
-	musicaCombate.setLoop(true);
+	musicaCombate.setLoop(false);
+
+	Music musicaCombate2;
+	if (!musicaCombate2.openFromFile("assets/musica/Musica Combate 2.ogg"))
+	{
+		return -1;
+	}
+	musicaCombate2.setLoop(false);
+
+	// Pantalla de menú principal
+	bool pantallaMenuActiva = true;
+	bool mostrarInstrucciones = false;
+	bool pantallaInstruccionesActiva = false;
+	Clock relojParpadeoInstrucciones;
+
+	// Control de alternancia de canciones de combate
+	bool usandoPrimeraCancion = true;
+	Clock relojCancion;
+	const float DURACION_CANCION = 74.0f; // 1 minuto y 14 segundos
 
 	SoundBuffer bufferGolpe;
 	if (!bufferGolpe.loadFromFile("assets/sonidos/golpe 2.wav"))
@@ -603,6 +621,253 @@ int main()
 		relojEntrada.restart();
 	};
 
+	// Pantalla de menú principal
+	while (ventanaRing.isOpen() && pantallaMenuActiva)
+	{
+		Event eventoMenu;
+		while (ventanaRing.pollEvent(eventoMenu))
+		{
+			if (eventoMenu.type == Event::Closed)
+			{
+				ventanaRing.close();
+			}
+			else if (eventoMenu.type == Event::KeyPressed)
+			{
+				if (eventoMenu.key.code == Keyboard::A)
+				{
+					// Opción A: Jugar
+					sonidoGolpe.play();
+					pantallaMenuActiva = false;
+					mostrarInstrucciones = false;
+				}
+				else if (eventoMenu.key.code == Keyboard::B)
+				{
+					// Opción 2: Instrucciones
+					sonidoGolpe.play();
+					pantallaMenuActiva = false;
+					pantallaInstruccionesActiva = true;
+					mostrarInstrucciones = true;
+				}
+			}
+		}
+
+		if (!ventanaRing.isOpen())
+		{
+			break;
+		}
+
+		if (relojParpadeoInstrucciones.getElapsedTime().asSeconds() >= 0.65f)
+		{
+			mostrarTextoContinuar = !mostrarTextoContinuar;
+			relojParpadeoInstrucciones.restart();
+		}
+
+		ventanaRing.clear(Color::Black);
+		ventanaRing.draw(lienzoRing);
+
+		// Título del juego
+		Text tituloPrincipal;
+		tituloPrincipal.setFont(fuenteJuego);
+		tituloPrincipal.setString("PUNCH OUT!");
+		tituloPrincipal.setCharacterSize(128);
+		tituloPrincipal.setFillColor(Color(220, 220, 220));
+		const FloatRect limTitulo = tituloPrincipal.getLocalBounds();
+		tituloPrincipal.setOrigin(limTitulo.left + (limTitulo.width * 0.5f), limTitulo.top + (limTitulo.height * 0.5f));
+		tituloPrincipal.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 70.0f);
+
+		// Mensaje de bienvenida
+		Text mensajeBienvenida;
+		mensajeBienvenida.setFont(fuenteJuego);
+		mensajeBienvenida.setString("¡BIENVENIDO AL RING!");
+		mensajeBienvenida.setCharacterSize(48);
+		mensajeBienvenida.setFillColor(Color(160, 160, 160));
+		const FloatRect limBienvenida = mensajeBienvenida.getLocalBounds();
+		mensajeBienvenida.setOrigin(limBienvenida.left + (limBienvenida.width * 0.5f), limBienvenida.top + (limBienvenida.height * 0.5f));
+		mensajeBienvenida.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 200.0f);
+
+		// Opción 1: Jugar
+		Text opcionJugar;
+		opcionJugar.setFont(fuenteJuego);
+		opcionJugar.setString("A. JUGAR");
+		opcionJugar.setCharacterSize(52);
+		opcionJugar.setFillColor(Color(180, 180, 180));
+		const FloatRect limJugar = opcionJugar.getLocalBounds();
+		opcionJugar.setOrigin(limJugar.left + (limJugar.width * 0.5f), limJugar.top + (limJugar.height * 0.5f));
+		opcionJugar.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 350.0f);
+
+		// Opción 2: Instrucciones
+		Text opcionInstrucciones;
+		opcionInstrucciones.setFont(fuenteJuego);
+		opcionInstrucciones.setString("B. INSTRUCCIONES");
+		opcionInstrucciones.setCharacterSize(52);
+		opcionInstrucciones.setFillColor(Color(180, 180, 180));
+		const FloatRect limInst = opcionInstrucciones.getLocalBounds();
+		opcionInstrucciones.setOrigin(limInst.left + (limInst.width * 0.5f), limInst.top + (limInst.height * 0.5f));
+		opcionInstrucciones.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 450.0f);
+
+		// Atajos
+		Text atajos;
+		atajos.setFont(fuenteJuego);
+		atajos.setString("(Presiona A para Jugar o B para Instrucciones)");
+		atajos.setCharacterSize(24);
+		atajos.setFillColor(Color(120, 120, 120));
+		const FloatRect limAtajos = atajos.getLocalBounds();
+		atajos.setOrigin(limAtajos.left + (limAtajos.width * 0.5f), limAtajos.top);
+		atajos.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, static_cast<float>(dimensionesVentana.y) - 120.0f);
+
+		ventanaRing.draw(tituloPrincipal);
+		ventanaRing.draw(mensajeBienvenida);
+		ventanaRing.draw(opcionJugar);
+		ventanaRing.draw(opcionInstrucciones);
+		ventanaRing.draw(atajos);
+
+		ventanaRing.display();
+	}
+
+	mostrarTextoContinuar = true;
+	relojParpadeoInstrucciones.restart();
+
+	if (!ventanaRing.isOpen())
+	{
+		return 0;
+	}
+
+	// Pantalla de instrucciones
+	while (ventanaRing.isOpen() && pantallaInstruccionesActiva)
+	{
+		Event eventoInstrucciones;
+		while (ventanaRing.pollEvent(eventoInstrucciones))
+		{
+			if (eventoInstrucciones.type == Event::Closed)
+			{
+				ventanaRing.close();
+			}
+			else if (eventoInstrucciones.type == Event::KeyPressed)
+			{
+				if (eventoInstrucciones.key.code == Keyboard::Space || eventoInstrucciones.key.code == Keyboard::Return)
+				{
+					sonidoGolpe.play();
+					pantallaInstruccionesActiva = false;
+				}
+			}
+		}
+
+		if (!ventanaRing.isOpen())
+		{
+			break;
+		}
+
+		if (relojParpadeoInstrucciones.getElapsedTime().asSeconds() >= 0.8f)
+		{
+			mostrarTextoContinuar = !mostrarTextoContinuar;
+			relojParpadeoInstrucciones.restart();
+		}
+
+		ventanaRing.clear(Color::Black);
+		ventanaRing.draw(lienzoRing);
+
+		// Título del juego
+		Text tituloPrincipal;
+		tituloPrincipal.setFont(fuenteJuego);
+		tituloPrincipal.setString("PUNCH OUT!");
+		tituloPrincipal.setCharacterSize(96);
+		tituloPrincipal.setFillColor(Color::Yellow);
+		const FloatRect limTitulo = tituloPrincipal.getLocalBounds();
+		tituloPrincipal.setOrigin(limTitulo.left + (limTitulo.width * 0.5f), limTitulo.top + (limTitulo.height * 0.5f));
+		tituloPrincipal.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 60.0f);
+
+		// Mensaje de bienvenida
+		Text mensajeBienvenida;
+		mensajeBienvenida.setFont(fuenteJuego);
+		mensajeBienvenida.setString("¡BIENVENIDO AL RING!");
+		mensajeBienvenida.setCharacterSize(48);
+		mensajeBienvenida.setFillColor(Color::White);
+		const FloatRect limBienvenida = mensajeBienvenida.getLocalBounds();
+		mensajeBienvenida.setOrigin(limBienvenida.left + (limBienvenida.width * 0.5f), limBienvenida.top + (limBienvenida.height * 0.5f));
+		mensajeBienvenida.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, 160.0f);
+
+		// Instrucciones generales
+		Text instruccionesGenerales;
+		instruccionesGenerales.setFont(fuenteJuego);
+		instruccionesGenerales.setString("OBJETIVO: Derrotar al oponente 3 veces (K.O) para ganar");
+		instruccionesGenerales.setCharacterSize(24);
+		instruccionesGenerales.setFillColor(Color::Cyan);
+		const FloatRect limGeneral = instruccionesGenerales.getLocalBounds();
+		instruccionesGenerales.setOrigin(limGeneral.left, limGeneral.top);
+		instruccionesGenerales.setPosition(40.0f, 240.0f);
+
+		// Controles - Boxeador Rojo
+		Text controlesClasicoTitulo;
+		controlesClasicoTitulo.setFont(fuenteJuego);
+		controlesClasicoTitulo.setString("BOXEADOR ROJO (Izquierda):");
+		controlesClasicoTitulo.setCharacterSize(32);
+		controlesClasicoTitulo.setFillColor(Color::Red);
+		controlesClasicoTitulo.setPosition(40.0f, 300.0f);
+
+		Text controlesClasicoDetalles;
+		controlesClasicoDetalles.setFont(fuenteJuego);
+		controlesClasicoDetalles.setString("  W = Saltar arriba      |      A = Retroceder      |      D = Avanzar\n  S = Bloqueo              |      Q = Atacar (Combos)");
+		controlesClasicoDetalles.setCharacterSize(20);
+		controlesClasicoDetalles.setFillColor(Color(255, 150, 150));
+		controlesClasicoDetalles.setPosition(60.0f, 345.0f);
+
+		// Controles - Boxeador Azul
+		Text controlesHitmanTitulo;
+		controlesHitmanTitulo.setFont(fuenteJuego);
+		controlesHitmanTitulo.setString("BOXEADOR AZUL (Derecha):");
+		controlesHitmanTitulo.setCharacterSize(32);
+		controlesHitmanTitulo.setFillColor(Color::Blue);
+		controlesHitmanTitulo.setPosition(40.0f, 430.0f);
+
+		Text controlesHitmanDetalles;
+		controlesHitmanDetalles.setFont(fuenteJuego);
+		controlesHitmanDetalles.setString("  ↑ = Saltar arriba      |      ← = Retroceder      |      → = Avanzar\n  ↓ = Bloqueo              |      Enter = Atacar (Combos)");
+		controlesHitmanDetalles.setCharacterSize(20);
+		controlesHitmanDetalles.setFillColor(Color(150, 200, 255));
+		controlesHitmanDetalles.setPosition(60.0f, 475.0f);
+
+		// Consejos
+		Text consejos;
+		consejos.setFont(fuenteJuego);
+		consejos.setString("CONSEJOS:\n• Mantén tu energia y usa el bloqueo para proteger tu escudo\n• Ataca cuando el oponente este cerca (rango de golpe)\n• La defensa es importante: bloquea los ataques enemigos");
+		consejos.setCharacterSize(18);
+		consejos.setFillColor(Color::Green);
+		consejos.setPosition(60.0f, 565.0f);
+
+		// Mensaje de continuar
+		if (mostrarTextoContinuar)
+		{
+			Text mensajeContinuar;
+			mensajeContinuar.setFont(fuenteJuego);
+			mensajeContinuar.setString("Presiona SPACE para comenzar a jugar");
+			mensajeContinuar.setCharacterSize(28);
+			mensajeContinuar.setFillColor(Color::White);
+			const FloatRect limCont = mensajeContinuar.getLocalBounds();
+			mensajeContinuar.setOrigin(limCont.left + (limCont.width * 0.5f), limCont.top);
+			mensajeContinuar.setPosition(static_cast<float>(dimensionesVentana.x) * 0.5f, static_cast<float>(dimensionesVentana.y) - 50.0f);
+			ventanaRing.draw(mensajeContinuar);
+		}
+
+		ventanaRing.draw(tituloPrincipal);
+		ventanaRing.draw(mensajeBienvenida);
+		ventanaRing.draw(instruccionesGenerales);
+		ventanaRing.draw(controlesClasicoTitulo);
+		ventanaRing.draw(controlesClasicoDetalles);
+		ventanaRing.draw(controlesHitmanTitulo);
+		ventanaRing.draw(controlesHitmanDetalles);
+		ventanaRing.draw(consejos);
+
+		ventanaRing.display();
+	}
+
+	mostrarTextoContinuar = true;
+	relojParpadeoInstrucciones.restart();
+
+	if (!ventanaRing.isOpen())
+	{
+		return 0;
+	}
+
 	reiniciarPartida();
 
 	while (ventanaRing.isOpen() && pantallaCargaActiva)
@@ -649,6 +914,8 @@ int main()
 	relojParpadeo.restart();
 	musicaIntro.stop();
 	musicaCombate.play();
+	usandoPrimeraCancion = true;
+	relojCancion.restart();
 
 	if (!ventanaRing.isOpen())
 	{
@@ -665,6 +932,28 @@ int main()
 		animacionActual->update(segundosDelta);
 		animacionJabReposo.update(segundosDelta);
 		animacionHitmanActual->update(segundosDelta);
+		
+		// Alternar canciones de combate cada 90 segundos
+		if (!faseCuentaPrevia && !juegoTerminado)
+		{
+			if (relojCancion.getElapsedTime().asSeconds() >= DURACION_CANCION)
+			{
+				if (usandoPrimeraCancion)
+				{
+					musicaCombate.stop();
+					musicaCombate2.play();
+					usandoPrimeraCancion = false;
+				}
+				else
+				{
+					musicaCombate2.stop();
+					musicaCombate.play();
+					usandoPrimeraCancion = true;
+				}
+				relojCancion.restart();
+			}
+		}
+		
 		if (faseCuentaPrevia)
 		{
 			tiempoCuentaPrevia = std::max(0.0f, tiempoCuentaPrevia - segundosDelta);
@@ -1222,6 +1511,9 @@ int main()
 		}
 		ventanaRing.display();
 	}
+
+	musicaCombate.stop();
+	musicaCombate2.stop();
 
 	return 0;
 }
