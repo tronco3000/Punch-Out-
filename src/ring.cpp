@@ -41,14 +41,14 @@ int main()
 	{
 		return -1;
 	}
-	musicaCombate.setLoop(false);
+	musicaCombate.setLoop(true);
 
 	Music musicaCombate2;
 	if (!musicaCombate2.openFromFile("assets/musica/Musica Combate 2.ogg"))
 	{
 		return -1;
 	}
-	musicaCombate2.setLoop(false);
+	musicaCombate2.setLoop(true);
 
 	// Pantalla de menú principal
 	bool pantallaMenuActiva = true;
@@ -56,10 +56,8 @@ int main()
 	bool pantallaInstruccionesActiva = false;
 	Clock relojParpadeoInstrucciones;
 
-	// Control de alternancia de canciones de combate
-	bool usandoPrimeraCancion = true;
-	Clock relojCancion;
-	const float DURACION_CANCION = 74.0f; // 1 minuto y 14 segundos
+	// Control de alternancia de canciones de combate basado en derribos
+	bool musicaIntensaActiva = false;  // true cuando algún jugador está a punto de KO (2 derribos)
 
 	SoundBuffer bufferGolpe;
 	if (!bufferGolpe.loadFromFile("assets/sonidos/golpe 2.wav"))
@@ -1077,8 +1075,7 @@ int main()
 	relojParpadeo.restart();
 	musicaIntro.stop();
 	musicaCombate.play();
-	usandoPrimeraCancion = true;
-	relojCancion.restart();
+	musicaIntensaActiva = false;
 
 	if (!ventanaRing.isOpen())
 	{
@@ -1208,6 +1205,13 @@ int main()
 										colorGanador = Color::Cyan;
 										jugadorRojoEliminado = true;
 										jugadorAzulGanador = true;
+										// Volver a música normal cuando termina el juego
+										if (musicaIntensaActiva)
+										{
+											musicaCombate2.stop();
+											musicaCombate.play();
+											musicaIntensaActiva = false;
+										}
 									}
 								}
 							}
@@ -1273,24 +1277,25 @@ int main()
 			}
 		}
 		
-		// Alternar canciones de combate cada 90 segundos
+		// Alternar canciones de combate basado en derribos
 		if (!faseCuentaPrevia && !juegoTerminado)
 		{
-			if (relojCancion.getElapsedTime().asSeconds() >= DURACION_CANCION)
+			// Si algún jugador tiene 2 derribos (punto de KO), activar música intensa
+			bool debeActivarMusicaIntensa = (derribosClasico >= 2 || derribosHitman >= 2);
+			
+			if (debeActivarMusicaIntensa && !musicaIntensaActiva)
 			{
-				if (usandoPrimeraCancion)
-				{
-					musicaCombate.stop();
-					musicaCombate2.play();
-					usandoPrimeraCancion = false;
-				}
-				else
-				{
-					musicaCombate2.stop();
-					musicaCombate.play();
-					usandoPrimeraCancion = true;
-				}
-				relojCancion.restart();
+				// Cambiar a música intensa
+				musicaCombate.stop();
+				musicaCombate2.play();
+				musicaIntensaActiva = true;
+			}
+			else if (!debeActivarMusicaIntensa && musicaIntensaActiva)
+			{
+				// Volver a música normal
+				musicaCombate2.stop();
+				musicaCombate.play();
+				musicaIntensaActiva = false;
 			}
 		}
 		
@@ -1551,6 +1556,7 @@ int main()
 						if (vidaClasico <= 0.0f)
 						{
 							vidasClasico -= 1;
+							derribosHitman++;
 							if (vidasClasico > 0)
 							{
 								relojKnockdown.restart();
@@ -1574,6 +1580,13 @@ int main()
 								colorGanador = Color::Blue;
 								jugadorRojoEliminado = true;
 								jugadorAzulGanador = true;
+								// Volver a música normal cuando termina el juego
+								if (musicaIntensaActiva)
+								{
+									musicaCombate2.stop();
+									musicaCombate.play();
+									musicaIntensaActiva = false;
+								}
 							}
 						}
 					}
@@ -1682,6 +1695,13 @@ int main()
 								colorGanador = Color::Red;
 								jugadorAzulEliminado = true;
 								jugadorRojoGanador = true;
+								// Volver a música normal cuando termina el juego
+								if (musicaIntensaActiva)
+								{
+									musicaCombate2.stop();
+									musicaCombate.play();
+									musicaIntensaActiva = false;
+								}
 							}
 						}
 					}
